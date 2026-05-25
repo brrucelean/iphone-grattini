@@ -15,25 +15,23 @@
     <meta property="og:type" content="website" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html {
-        /* dvh = dynamic viewport height: si adatta alla barra Safari che appare/scompare */
-        height: 100dvh;
-        height: -webkit-fill-available; /* fallback iOS < 15.4 */
-      }
-      body {
-        height: 100%;
+      html, body {
+        width: 100%; height: 100%;
+        /* overflow hidden su body: il game frame si estende con position:absolute inset:0
+           così non servono mai unità vh che su iOS Safari sono sbagliate */
+        overflow: hidden;
         background: #0a0a12;
-        /* iPhone: niente bounce-scroll, niente selezione testo accidentale */
         overscroll-behavior: none;
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
-        /* NO padding sul body — il safe-area lo gestiamo nel frame React */
       }
       #root {
-        height: 100%;
-        width: 100%;
+        width: 100%; height: 100%;
         overflow: hidden;
+        /* safe-area: rientra dai bordi del notch/home-indicator */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+                 env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
     </style>
   </head>

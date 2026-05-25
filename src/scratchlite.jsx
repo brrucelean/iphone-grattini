@@ -402,17 +402,13 @@ export default function Grattini() {
   const { isMobile } = useIsMobile();
 
   return (
+    /* position:absolute inset:0 su html/body overflow:hidden è l'unico modo
+       affidabile su iOS Safari — non usa vh che è sbagliato con la barra URL */
     <div style={{
-      position:"fixed", top:0, left:0,
-      width:"100%", height:"100%",
+      position:"absolute", inset:0,
       background: bioPal.bg,
       display:"flex", alignItems:"center", justifyContent:"center",
       overflow:"hidden",
-      /* safe-area: padding sotto il Dynamic Island e l'home indicator */
-      paddingTop: "env(safe-area-inset-top)",
-      paddingBottom: "env(safe-area-inset-bottom)",
-      paddingLeft: "env(safe-area-inset-left)",
-      paddingRight: "env(safe-area-inset-right)",
     }}>
     {/* ── FRAME FLUIDO — riempie tutto il viewport, layout responsive ── */}
     <div style={{...S.container, cursor: globalNailCursor,
