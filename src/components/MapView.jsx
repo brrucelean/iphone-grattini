@@ -1,513 +1,483 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { C, FONT } from "../data/theme.js";
 import { NODE_ICONS, NODE_TOOLTIPS } from "../data/map.js";
 import { BIOMES, BIOME_MODIFIERS } from "../data/biomes.js";
 import { Tooltip } from "./Tooltip.jsx";
 
+// ─── COSTANTI LAYOUT ─────────────────────────────────────────────
+// Nodi fissi grandi → la mappa scrolla verticalmente invece di
+// comprimere tutto in viewport. Su iPhone i nodi sono toccabili.
+const ROW_H = 90;   // altezza per riga
+const NW    = 84;   // larghezza nodo
+const NH    = 66;   // altezza nodo
+
+const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
+const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
+
+// Legenda (footer)
+const LEGEND = [
+  { col:"#ff4444", label:"PERICOLO" },
+  { col:"#ffdd00", label:"NEUTRO"   },
+  { col:"#44dd88", label:"SICURO"   },
+  { col:"#cc99ff", label:"SEGRETO"  },
+  { col:"#ff6600", label:"ELITE"    },
+];
+
 export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachableNodes, currentBiome = 0, playerFortuna = 0 }) {
-  // ── Canvas responsivo: ROW_H scala con numero righe per NON scrollare ──
-  // Stima spazio disponibile per il canvas: viewport - header(150) - hud(50) - padding(40)
-  // Con 11 righe e viewport 900px: rowH ≈ (900-240)/11 ≈ 60. Clamp [48, 72].
+  const scrollRef = useRef(null);
+
+  // Auto-scroll sulla riga corrente quando la mappa viene aperta o cambia riga
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const targetY = currentRow * ROW_H - el.clientHeight / 2 + ROW_H / 2;
+    el.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+  }, [currentRow]);
+
   const rowsCount = map.rows.length || 1;
-  const availH = Math.max(360, (typeof window !== "undefined" ? window.innerHeight : 900) - 240);
-  const ROW_H = Math.max(50, Math.min(64, Math.floor(availH / rowsCount)));
-  // Larghezza canvas RESPONSIVA: su mobile usa la larghezza viewport disponibile
-  // (prima era fissa a 860 con overflow:hidden → i nodi a destra venivano tagliati
-  // e diventavano non cliccabili su iPhone).
-  const vw = typeof window !== "undefined" ? window.innerWidth : 900;
-  const W = Math.min(860, vw - 20);
-  const NW = 72, NH = 52;
-  const totalH = rowsCount * ROW_H;
+  const totalH    = rowsCount * ROW_H;
+  const vw        = typeof window !== "undefined" ? window.innerWidth : 900;
+  const W         = Math.min(860, vw - 16);
 
-  // Glitter particles — stabili (non ricalcolate a ogni render)
-  const glitter = useMemo(() => {
-    const COLORS = ["#ffd700","#00e5ff","#ff44aa","#ffffff","#bb88ff","#44ff99","#ffaa00"];
-    const ANIMS = ["glitA","glitB","glitC","glitD","glitE","glitF"];
-    return Array.from({length: 80}, (_, i) => ({
-      x: ((i * 73.7 + 11) % 97) + 1.5,
-      y: ((i * 47.3 + 29) % 95) + 1.5,
-      r: 0.7 + (i % 5) * 0.45,
-      color: COLORS[i % COLORS.length],
-      delay: (i * 0.23) % 5,
-      dur: 2.0 + (i % 7) * 0.5,
-      anim: ANIMS[i % ANIMS.length],
-    }));
-  }, []);
-
-  // Posizioni pixel centrate per ogni nodo.
-  // Inset di NW/2 ai bordi: x=0 → centro a NW/2, x=1 → centro a W-NW/2,
-  // così i nodi estremi restano interamente dentro il canvas (no clip su mobile).
-  const nodePos = {};
-  const usableW = Math.max(NW, W - NW);
-  map.rows.forEach((row, rIdx) => {
-    row.forEach(node => {
-      nodePos[node.id] = { cx: NW / 2 + node.x * usableW, cy: rIdx * ROW_H + ROW_H / 2 };
+  // Posizioni pixel nodi (centrate, con margine NW/2 ai bordi così non vengono tagliati)
+  const nodePos = useMemo(() => {
+    const pos = {};
+    const usableW = Math.max(NW, W - NW);
+    map.rows.forEach((row, rIdx) => {
+      row.forEach(node => {
+        pos[node.id] = {
+          cx: NW / 2 + node.x * usableW,
+          cy: rIdx * ROW_H + ROW_H / 2,
+        };
+      });
     });
-  });
+    return pos;
+  }, [map, W]);
 
-  // Legenda: edge normale vs shortcut (span > 1 riga)
-  const edges = [];
-  Object.entries(map.connections).forEach(([fromId, toIds]) => {
-    toIds.forEach(toId => {
-      const fromNode = map.rows.flat().find(n => n.id === fromId);
-      const toNode   = map.rows.flat().find(n => n.id === toId);
-      const rowDiff = toNode ? (toNode.row - (fromNode?.row ?? 0)) : 1;
-      edges.push({ fromId, toId, isShortcut: rowDiff > 1 });
+  // Edges con shortcut
+  const edges = useMemo(() => {
+    const list = [];
+    Object.entries(map.connections).forEach(([fromId, toIds]) => {
+      toIds.forEach(toId => {
+        const fromNode = map.rows.flat().find(n => n.id === fromId);
+        const toNode   = map.rows.flat().find(n => n.id === toId);
+        const rowDiff  = toNode ? (toNode.row - (fromNode?.row ?? 0)) : 1;
+        list.push({ fromId, toId, isShortcut: rowDiff > 1 });
+      });
     });
-  });
+    return list;
+  }, [map]);
 
-  const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
-  const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
-
-  // Colore edge per tipo di destinazione
+  // Colore linea
   const edgeColor = (toId, isActive, isPast, isShortcut) => {
-    if (isPast) return C.gold;
+    if (isPast)    return C.gold;
     if (!isActive) return "#1e1e2e";
     if (isShortcut) return C.magenta;
-    const toNode = map.rows.flat().find(n => n.id === toId);
-    if (!toNode) return `${C.gold}88`;
-    if (DANGER_TYPES.has(toNode.type)) return `${C.red}aa`;
-    if (SAFE_TYPES.has(toNode.type)) return `${C.green}aa`;
-    if (toNode.type === "boss") return `${C.red}cc`;
-    if (toNode.type === "evento") return `${C.magenta}88`;
-    if (toNode.type === "zaino") return `${C.gold}88`;
-    return `${C.gold}88`;
+    const n = map.rows.flat().find(n => n.id === toId);
+    if (!n) return `${C.gold}88`;
+    if (DANGER_TYPES.has(n.type)) return `${C.red}bb`;
+    if (SAFE_TYPES.has(n.type))   return `#44dd88bb`;
+    if (n.type === "boss")         return `${C.red}dd`;
+    if (n.type === "evento")       return `${C.magenta}99`;
+    return `${C.gold}99`;
   };
 
+  // Info bioma
   const biomeColor = BIOMES[currentBiome]?.color || C.cyan;
-  const biomeName = BIOMES[currentBiome]?.name || "Tabacchitalia Nord";
-  const biomeBoss = BIOMES[currentBiome]?.boss || "Il Broker";
-  const biomeDesc = BIOMES[currentBiome]?.desc || "";
-  const totalRows = map.rows.length;
+  const biomeName  = BIOMES[currentBiome]?.name  || "Tabacchitalia Nord";
+  const biomeBoss  = BIOMES[currentBiome]?.boss  || "Il Broker";
+  const biomeDesc  = BIOMES[currentBiome]?.desc  || "";
+  const totalRows  = map.rows.length;
   const progressRow = Math.min(currentRow + 1, totalRows);
   const progressPct = (progressRow / totalRows) * 100;
-
-  // Emoji simbolo per bioma (ASCII-emblem per fascia superiore)
-  const BIOME_GLYPH = ["🏭", "🎰", "🍕", "🏮"];
-  const biomeGlyph = BIOME_GLYPH[currentBiome] || "🏭";
-
-  // Chips legenda — colori allineati a quelli effettivi dei nodi (vedi borderCol più sotto)
-  const LEGEND_CHIPS = [
-    { icon:"◈", label:"PERICOLO", color:"#ff4444" }, // = nodo danger attivo
-    { icon:"◈", label:"NEUTRO",   color:C.gold    }, // = nodo evento/streamer/anziana/ecc
-    { icon:"◈", label:"SICURO",   color:"#44dd88" }, // = nodo safe attivo
-    { icon:"🔮", label:"SEGRETO",  color:"#cc99ff" }, // = nodo segreto sbloccato
-    { icon:"★", label:"ELITE",    color:C.orange },  // = nodo elite
-  ];
-
-  // Corner brackets — elemento Vintage ricorrente
-  const cornerBrackets = (color, size = 12, inset = -2, borderW = 2, shadow = true) => {
-    const common = {
-      position:"absolute", width:`${size}px`, height:`${size}px`,
-      borderColor: color, borderStyle:"solid",
-      filter: shadow ? `drop-shadow(0 0 4px ${color}aa)` : "none",
-      pointerEvents:"none",
-    };
-    return (
-      <>
-        <div style={{...common, top:inset,    left:inset,    borderWidth:`${borderW}px 0 0 ${borderW}px`}}/>
-        <div style={{...common, top:inset,    right:inset,   borderWidth:`${borderW}px ${borderW}px 0 0`}}/>
-        <div style={{...common, bottom:inset, left:inset,    borderWidth:`0 0 ${borderW}px ${borderW}px`}}/>
-        <div style={{...common, bottom:inset, right:inset,   borderWidth:`0 ${borderW}px ${borderW}px 0`}}/>
-      </>
-    );
-  };
+  const BIOME_GLYPH = ["🏭","🎰","🍕","🏮"];
+  const biomeGlyph  = BIOME_GLYPH[currentBiome] || "🏭";
 
   return (
     <div style={{
-      margin:"6px auto",
-      overflow:"hidden",
+      display:"flex", flexDirection:"column",
       border:`2px solid ${biomeColor}`,
-      borderRadius:"0",
       background:"#05050f",
       position:"relative",
-      boxShadow:`4px 4px 0 #000000, 0 0 28px ${biomeColor}44, inset 0 0 40px ${biomeColor}14`,
+      boxShadow:`4px 4px 0 #000000, 0 0 28px ${biomeColor}44`,
+      flex:1, minHeight:0, overflow:"hidden",
     }}>
-      {cornerBrackets(biomeColor, 14, -1, 2, true)}
-      {/* ── HEADER — pattern Vintage con stemma bioma + chips legenda + progress ── */}
+
+      {/* ── HEADER COMPATTO — una sola riga ────────────────────── */}
       <div style={{
-        position:"sticky", top:0, zIndex:10,
-        background:`linear-gradient(180deg, ${biomeColor}14, #08081899)`,
-        backdropFilter:"blur(8px)",
-        borderBottom:`1px solid ${biomeColor}66`,
-        padding:"8px 14px 6px",
+        flexShrink:0,
+        padding:"8px 12px",
+        background:`${biomeColor}1a`,
+        borderBottom:`2px solid ${biomeColor}`,
+        display:"flex", alignItems:"center", gap:"10px",
       }}>
-        {/* Riga top: stemma + titolo + boss */}
-        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px", marginBottom:"6px", position:"relative", overflow:"hidden"}}>
-          {/* Foil shimmer sul titolo */}
+        {/* Icona bioma */}
+        <span style={{
+          fontSize:"24px", flexShrink:0,
+          filter:`drop-shadow(0 0 6px ${biomeColor})`,
+        }}>{biomeGlyph}</span>
+
+        {/* Nome bioma + boss */}
+        <div style={{flex:1, minWidth:0}}>
           <div style={{
-            position:"absolute", inset:0, pointerEvents:"none",
-            background:`linear-gradient(110deg, transparent 30%, ${biomeColor}22 48%, ${biomeColor}55 50%, ${biomeColor}22 52%, transparent 70%)`,
-            backgroundSize:"220% 100%",
-            animation:"variantShimmer 4s linear infinite",
-            mixBlendMode:"screen",
-          }}/>
-          <div style={{display:"flex", alignItems:"center", gap:"10px", position:"relative", zIndex:2}}>
-            {/* Stemma bioma con corner brackets */}
-            <div style={{
-              width:"42px", height:"42px", flexShrink:0, position:"relative",
-              border:`2px solid ${biomeColor}`,
-              background:`radial-gradient(circle, ${biomeColor}33, ${biomeColor}08)`,
-              boxShadow:`0 0 12px ${biomeColor}88, inset 0 0 8px ${biomeColor}44`,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:"22px",
-              filter:`drop-shadow(0 0 6px ${biomeColor})`,
-            }}>
-              {cornerBrackets(biomeColor, 6, -3, 1.5, false)}
-              <span>{biomeGlyph}</span>
-            </div>
-            <div>
-              {/* Solid badge ★ BIOMA N/4 ★ */}
-              <div style={{
-                display:"inline-block",
-                background: biomeColor,
-                color:"#000",
-                fontFamily:FONT, fontWeight:"bold",
-                fontSize:"8px", letterSpacing:"2px",
-                padding:"2px 7px",
-                boxShadow:`0 0 8px ${biomeColor}aa`,
-                marginBottom:"3px",
-              }}>
-                ★ BIOMA {currentBiome + 1}/4 ★
-              </div>
-              {/* Titolo neon */}
-              <div style={{color: biomeColor, fontFamily:FONT, fontWeight:"bold", fontSize:"16px", letterSpacing:"3px", textShadow:`0 0 10px ${biomeColor}99, 0 0 20px ${biomeColor}44`, lineHeight:1}}>
-                ⬡ {biomeName.toUpperCase()} ⬡
-              </div>
-              {/* Boss badge rosso solido */}
-              <div style={{marginTop:"4px", display:"flex", alignItems:"center", gap:"6px"}}>
-                <span style={{
-                  display:"inline-block",
-                  background: C.red,
-                  color:"#fff",
-                  fontFamily:FONT, fontWeight:"bold",
-                  fontSize:"7px", letterSpacing:"1.5px",
-                  padding:"1px 6px",
-                  boxShadow:`0 0 6px ${C.red}aa`,
-                }}>
-                  ★ BOSS ★
-                </span>
-                <span style={{color:C.red, fontSize:"9px", fontWeight:"bold", letterSpacing:"1px", textShadow:`0 0 4px ${C.red}88`}}>
-                  {biomeBoss.toUpperCase()}
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Progress row → boss con corner brackets */}
-          <div style={{position:"relative", zIndex:2, textAlign:"right", flexShrink:0, padding:"4px 8px"}}>
-            {cornerBrackets(biomeColor, 7, 0, 1.5, false)}
-            <div style={{color:C.dim, fontSize:"8px", letterSpacing:"2px", marginBottom:"3px"}}>
-              RIGA <span style={{color:biomeColor, fontWeight:"bold"}}>{progressRow}</span>/{totalRows}
-            </div>
-            <div style={{width:"120px", height:"6px", background:"#1a1a22", border:`1px solid ${biomeColor}66`, position:"relative"}}>
-              <div style={{
-                height:"100%", width:`${progressPct}%`,
-                background:`linear-gradient(90deg, ${biomeColor}, ${C.red})`,
-                boxShadow:`0 0 6px ${biomeColor}aa`,
-                transition:"width 0.4s",
-              }}/>
-            </div>
-            <div style={{color:C.red, fontSize:"8px", letterSpacing:"2px", marginTop:"3px", opacity:0.9, fontWeight:"bold"}}>
-              → BOSS
-            </div>
-          </div>
-        </div>
-        {/* Descrizione bioma — blockquote ❝ ❞ */}
-        {biomeDesc && (
-          <div style={{
-            position:"relative", zIndex:2,
-            color:`${biomeColor}cc`, fontSize:"9px", fontStyle:"italic",
-            letterSpacing:"1px", textAlign:"center",
-            marginBottom:"6px", padding:"0 16px",
-            textShadow:`0 0 4px ${biomeColor}44`,
-            fontFamily:FONT,
-          }}>
-            ❝ {biomeDesc} ❞
-          </div>
-        )}
-        {/* Modificatore bioma attivo */}
-        {BIOME_MODIFIERS[currentBiome] && (
-          <Tooltip text={BIOME_MODIFIERS[currentBiome].desc}>
-            <div style={{
-              position:"relative", zIndex:2,
-              display:"inline-flex", alignItems:"center", gap:"5px",
-              margin:"0 auto 8px auto",
-              padding:"3px 10px",
-              background: `${biomeColor}10`,
-              border: `1px solid ${biomeColor}66`,
-              fontSize:"8px", letterSpacing:"1.5px",
-              color: biomeColor,
-              textShadow:`0 0 4px ${biomeColor}88`,
-              cursor:"help",
-            }}>
-              <span style={{fontSize:"11px"}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
-              <strong>{BIOME_MODIFIERS[currentBiome].label}</strong>
-              <span style={{opacity:0.6}}>· {BIOME_MODIFIERS[currentBiome].desc.length > 50 ? BIOME_MODIFIERS[currentBiome].desc.slice(0, 50) + "…" : BIOME_MODIFIERS[currentBiome].desc}</span>
-            </div>
-          </Tooltip>
-        )}
-        {/* Chips legenda con header ★ LEGENDA ★ */}
-        <div style={{position:"relative", zIndex:2, display:"flex", alignItems:"center", gap:"8px", justifyContent:"center", flexWrap:"wrap"}}>
-          <span style={{
             display:"inline-block",
-            background: "#000",
-            color: biomeColor,
-            border:`1px solid ${biomeColor}88`,
+            background: biomeColor, color:"#000",
             fontFamily:FONT, fontWeight:"bold",
             fontSize:"7px", letterSpacing:"2px",
-            padding:"2px 6px",
-            textShadow:`0 0 4px ${biomeColor}88`,
+            padding:"1px 6px", marginBottom:"2px",
           }}>
-            ★ LEGENDA ★
-          </span>
-          {LEGEND_CHIPS.map(chip => (
-            <span key={chip.label} style={{
-              display:"inline-flex", alignItems:"center", gap:"3px",
-              padding:"2px 7px",
-              background: `${chip.color}14`,
-              border:`1px solid ${chip.color}66`,
-              color: chip.color,
-              fontSize:"8px", letterSpacing:"1.5px", fontWeight:"bold",
-              fontFamily: FONT,
-              textShadow:`0 0 4px ${chip.color}88`,
-            }}>
-              <span>{chip.icon}</span><span>{chip.label}</span>
+            BIOMA {currentBiome + 1}/4
+          </div>
+          <div style={{
+            color: biomeColor, fontFamily:FONT, fontWeight:"bold",
+            fontSize:"14px", letterSpacing:"2px",
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+            textShadow:`0 0 10px ${biomeColor}99`,
+          }}>
+            {biomeName.toUpperCase()}
+          </div>
+          <div style={{display:"flex", alignItems:"center", gap:"5px", marginTop:"2px"}}>
+            <span style={{
+              background:C.red, color:"#fff",
+              fontFamily:FONT, fontWeight:"bold",
+              fontSize:"7px", letterSpacing:"1px",
+              padding:"1px 5px",
+              boxShadow:`0 0 5px ${C.red}aa`,
+            }}>BOSS</span>
+            <span style={{color:C.red, fontSize:"10px", fontFamily:FONT, fontWeight:"bold", letterSpacing:"0.5px"}}>
+              {biomeBoss.toUpperCase()}
             </span>
-          ))}
+          </div>
+        </div>
+
+        {/* Progress riga/boss */}
+        <div style={{flexShrink:0, textAlign:"right"}}>
+          <div style={{
+            color:C.dim, fontSize:"9px", fontFamily:FONT,
+            letterSpacing:"1px", marginBottom:"4px",
+          }}>
+            <span style={{color:biomeColor, fontWeight:"bold"}}>{progressRow}</span>
+            <span style={{color:"#444"}}>/</span>
+            <span>{totalRows}</span>
+          </div>
+          <div style={{
+            width:"72px", height:"7px",
+            background:"#111",
+            border:`2px solid ${biomeColor}66`,
+            position:"relative",
+          }}>
+            <div style={{
+              position:"absolute", inset:0,
+              width:`${progressPct}%`,
+              background:`linear-gradient(90deg, ${biomeColor}, ${C.red})`,
+              boxShadow:`0 0 6px ${biomeColor}`,
+              transition:"width 0.5s",
+            }}/>
+          </div>
+          <div style={{
+            color:C.red, fontSize:"8px", fontFamily:FONT,
+            letterSpacing:"1px", marginTop:"2px",
+            textShadow:`0 0 4px ${C.red}99`,
+          }}>→ BOSS</div>
         </div>
       </div>
 
-      {/* ── CANVAS ── (responsive: se il pannello è più stretto di W, scala proporzionalmente) */}
-      <div style={{
-        position:"relative",
-        width:`${W}px`, maxWidth:"100%",
-        height:`${totalH}px`,
-        margin:"0 auto",
-        overflow:"hidden",
-      }}>
+      {/* Modificatore bioma — se presente, una strip sottile */}
+      {BIOME_MODIFIERS[currentBiome] && (
+        <div style={{
+          flexShrink:0,
+          display:"flex", alignItems:"center", gap:"5px",
+          justifyContent:"center",
+          padding:"3px 10px",
+          background:`${biomeColor}0c`,
+          borderBottom:`1px solid ${biomeColor}44`,
+          fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
+          color: biomeColor,
+        }}>
+          <span style={{fontSize:"11px"}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
+          <strong>{BIOME_MODIFIERS[currentBiome].label}</strong>
+          <span style={{opacity:0.55}}>—</span>
+          <span style={{opacity:0.7}}>
+            {BIOME_MODIFIERS[currentBiome].desc.length > 45
+              ? BIOME_MODIFIERS[currentBiome].desc.slice(0, 45) + "…"
+              : BIOME_MODIFIERS[currentBiome].desc}
+          </span>
+        </div>
+      )}
 
-        {/* SFONDO GLITTER ANIMATO */}
-        <svg style={{position:"absolute", top:0, left:0, width:"100%", height:"100%", pointerEvents:"none"}} aria-hidden>
-          {/* Griglia di sfondo sottile */}
-          <defs>
-            <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff06" strokeWidth="0.5"/>
-            </pattern>
-            <filter id="lineglow" x="-50%" y="-20%" width="200%" height="140%">
-              <feGaussianBlur stdDeviation="2" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="nodeglow">
-              <feGaussianBlur stdDeviation="3" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            {/* Glow orb di sfondo per ogni bioma */}
-            <radialGradient id="biomeGlow" cx="50%" cy="30%" r="60%">
-              <stop offset="0%" stopColor={biomeColor} stopOpacity="0.06"/>
-              <stop offset="100%" stopColor={biomeColor} stopOpacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#mapgrid)"/>
-          <rect width="100%" height="100%" fill="url(#biomeGlow)"/>
+      {/* ── MAPPA SCROLLABILE ───────────────────────────────────── */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex:1, minHeight:0,
+          overflowY:"auto", overflowX:"hidden",
+          WebkitOverflowScrolling:"touch",
+          position:"relative",
+        }}
+      >
+        <div style={{
+          position:"relative",
+          width:"100%", maxWidth:`${W}px`,
+          height:`${totalH}px`,
+          margin:"0 auto",
+        }}>
 
-          {/* Glitter particles */}
-          {glitter.map((g, i) => (
-            <circle key={i}
-              cx={`${g.x}%`} cy={`${g.y}%`} r={g.r}
-              fill={g.color}
-              style={{
-                animation:`${g.anim} ${g.dur}s ${g.delay}s infinite ease-in-out`,
-                opacity:0,
-              }}
-            />
-          ))}
-        </svg>
+          {/* ── HIGHLIGHT RIGA CORRENTE ──────────────────────────── */}
+          <div style={{
+            position:"absolute",
+            left:0, right:0,
+            top: currentRow * ROW_H,
+            height: ROW_H,
+            background:`${biomeColor}10`,
+            borderTop:`1px solid ${biomeColor}55`,
+            borderBottom:`1px solid ${biomeColor}55`,
+            pointerEvents:"none",
+            zIndex:0,
+          }}/>
 
-        {/* ── LINEE DI CONNESSIONE ── */}
-        <svg style={{position:"absolute", top:0, left:0, width:W, height:totalH, pointerEvents:"none", overflow:"visible"}}>
-          <defs>
-            {/* Gradient per ogni tipo di percorso */}
-            <linearGradient id="edgePast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={C.gold} stopOpacity="0.9"/>
-              <stop offset="100%" stopColor={C.gold} stopOpacity="0.4"/>
-            </linearGradient>
-            <linearGradient id="edgeDanger" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={C.red} stopOpacity="0.7"/>
-              <stop offset="100%" stopColor="#ff8800" stopOpacity="0.4"/>
-            </linearGradient>
-            <linearGradient id="edgeSafe" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={C.green} stopOpacity="0.7"/>
-              <stop offset="100%" stopColor={C.cyan} stopOpacity="0.4"/>
-            </linearGradient>
-            <linearGradient id="edgeNeutral" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={C.gold} stopOpacity="0.5"/>
-              <stop offset="100%" stopColor={C.gold} stopOpacity="0.2"/>
-            </linearGradient>
-            <linearGradient id="edgeShortcut" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={C.magenta} stopOpacity="0.8"/>
-              <stop offset="100%" stopColor="#aa44ff" stopOpacity="0.4"/>
-            </linearGradient>
-          </defs>
+          {/* ── GRIGLIA DI SFONDO ────────────────────────────────── */}
+          <svg
+            style={{position:"absolute", top:0, left:0, width:"100%", height:"100%", pointerEvents:"none"}}
+            aria-hidden
+          >
+            <defs>
+              <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff05" strokeWidth="0.5"/>
+              </pattern>
+              <radialGradient id="biomeGlowMap" cx="50%" cy="40%" r="55%">
+                <stop offset="0%"   stopColor={biomeColor} stopOpacity="0.06"/>
+                <stop offset="100%" stopColor={biomeColor} stopOpacity="0"/>
+              </radialGradient>
+              <filter id="lineglow" x="-50%" y="-20%" width="200%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#mapgrid)"/>
+            <rect width="100%" height="100%" fill="url(#biomeGlowMap)"/>
+          </svg>
 
-          {edges.map(({ fromId, toId, isShortcut }) => {
-            const from = nodePos[fromId];
-            const to   = nodePos[toId];
-            if (!from || !to) return null;
-            const fromVisited = visitedNodes.includes(fromId);
-            const toReachable = reachableNodes.includes(toId);
-            const isActive    = fromVisited && toReachable;
-            const isPast      = fromVisited && visitedNodes.includes(toId);
+          {/* ── LINEE DI CONNESSIONE ─────────────────────────────── */}
+          <svg
+            style={{position:"absolute", top:0, left:0, width:W, height:totalH, pointerEvents:"none", overflow:"visible"}}
+          >
+            {edges.map(({ fromId, toId, isShortcut }) => {
+              const from = nodePos[fromId];
+              const to   = nodePos[toId];
+              if (!from || !to) return null;
+              const fromVisited = visitedNodes.includes(fromId);
+              const toReachable = reachableNodes.includes(toId);
+              const isActive    = fromVisited && toReachable;
+              const isPast      = fromVisited && visitedNodes.includes(toId);
 
-            if (!isActive && !isPast) return (
-              <line key={`${fromId}-${toId}`}
-                x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                stroke="#aaaacc" strokeWidth="1.5" strokeOpacity="0.22"
-                strokeDasharray="3 7" strokeLinecap="round"
-              />
-            );
-
-            const sw   = isPast ? 3.5 : 2.5;
-            const dash = isPast ? "none" : isShortcut ? "4 6" : "6 5";
-            const col  = edgeColor(toId, isActive, isPast, isShortcut);
-
-            if (isShortcut) {
-              const ctrl1x = from.cx - 40, ctrl1y = from.cy + 20;
-              const ctrl2x = to.cx - 40,   ctrl2y = to.cy   - 20;
-              return (
-                <path key={`${fromId}-${toId}`}
-                  d={`M ${from.cx} ${from.cy} C ${ctrl1x} ${ctrl1y} ${ctrl2x} ${ctrl2y} ${to.cx} ${to.cy}`}
-                  stroke={col} strokeWidth={sw} strokeDasharray={dash}
-                  fill="none" strokeLinecap="round" filter="url(#lineglow)"
+              if (!isActive && !isPast) return (
+                <line key={`${fromId}-${toId}`}
+                  x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                  stroke="#aaaacc" strokeWidth="1.5" strokeOpacity="0.18"
+                  strokeDasharray="3 8" strokeLinecap="round"
                 />
               );
-            }
+
+              const sw   = isPast ? 4 : 3;
+              const dash = isPast ? "none" : isShortcut ? "5 6" : "7 5";
+              const col  = edgeColor(toId, isActive, isPast, isShortcut);
+
+              if (isPast) return (
+                <line key={`${fromId}-${toId}`}
+                  x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                  stroke={col} strokeWidth={sw}
+                  strokeLinecap="round"
+                  filter="url(#lineglow)"
+                />
+              );
+
+              if (isShortcut) {
+                const ctrl1x = from.cx - 50, ctrl1y = from.cy + 25;
+                const ctrl2x = to.cx   - 50, ctrl2y = to.cy   - 25;
+                return (
+                  <path key={`${fromId}-${toId}`}
+                    d={`M ${from.cx} ${from.cy} C ${ctrl1x} ${ctrl1y} ${ctrl2x} ${ctrl2y} ${to.cx} ${to.cy}`}
+                    stroke={col} strokeWidth={sw} strokeDasharray={dash}
+                    fill="none" strokeLinecap="round" filter="url(#lineglow)"
+                  />
+                );
+              }
+              return (
+                <line key={`${fromId}-${toId}`}
+                  x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                  stroke={col} strokeWidth={sw} strokeDasharray={dash}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </svg>
+
+          {/* ── NODI ─────────────────────────────────────────────── */}
+          {map.rows.map((row, rIdx) => row.map(node => {
+            const { cx, cy } = nodePos[node.id];
+            const visited   = visitedNodes.includes(node.id);
+            const reachable = reachableNodes.includes(node.id);
+            const isActive  = reachable && !visited;
+            const isBoss    = node.type === "boss";
+            const isSecret  = !!node.secret;
+            const isElite   = !!node.elite && !visited;
+            const secretThreshold = BIOME_MODIFIERS[currentBiome]?.secretFortuneThreshold ?? 2;
+            const secretUnlocked  = isSecret && playerFortuna >= secretThreshold;
+            const effectivelyHidden = isSecret && !secretUnlocked && !visited;
+
+            const icon = effectivelyHidden ? "🔒" : isSecret ? "🔮" : NODE_ICONS[node.type] || "?";
+            const dangerNode = DANGER_TYPES.has(node.type);
+            const safeNode   = SAFE_TYPES.has(node.type);
+
+            // Bordo — più spesso se cliccabile
+            const borderWidth = isBoss ? 3 : isElite || (isActive && secretUnlocked) ? 3 : isActive ? 2 : 1;
+            const borderCol   = visited             ? "#1a1a28"
+              : isBoss                              ? "#ff2244"
+              : isElite                             ? C.orange
+              : isActive && secretUnlocked          ? "#cc99ff"
+              : isActive && dangerNode              ? "#ff4444"
+              : isActive && safeNode                ? "#44dd88"
+              : isActive                            ? C.gold
+              : "#252538";
+
+            // Sfondo — vivido per nodi attivi, quasi-nero altrimenti
+            const bgCol = visited                   ? "#0a0a0a"
+              : isBoss                              ? "#3a0000"
+              : isElite                             ? "#2a1800"
+              : isActive && secretUnlocked          ? "#200028"
+              : isActive && dangerNode              ? "#2e0000"
+              : isActive && safeNode                ? "#002e00"
+              : isActive                            ? "#0c0c30"
+              : "#0a0a12";
+
+            const shadow = isActive
+              ? isBoss
+                ? `0 0 24px ${C.red}ee, 0 0 48px ${C.red}66, 3px 3px 0 #000`
+                : isElite
+                  ? `0 0 18px ${C.orange}dd, 3px 3px 0 #000`
+                  : secretUnlocked
+                    ? `0 0 18px #cc99ffdd, 3px 3px 0 #000`
+                    : dangerNode
+                      ? `0 0 16px #ff4444dd, 3px 3px 0 #000`
+                      : safeNode
+                        ? `0 0 16px #44dd88dd, 3px 3px 0 #000`
+                        : `0 0 16px ${C.gold}dd, 3px 3px 0 #000`
+              : "none";
+
+            const animation = isBoss && isActive ? "bossGlow 1.8s infinite"
+              : isActive ? "slotGlow 2s infinite"
+              : "none";
+
+            const label = node.type === "boss"
+              ? (node.bossName || "BOSS")
+              : effectivelyHidden ? "???"
+              : node.type;
+
+            const tooltip = effectivelyHidden
+              ? `🔒 Nodo Segreto — richiede Fortuna ≥ ${secretThreshold}`
+              : isSecret ? "🔮 Nodo Segreto — evento raro con ricompense uniche!"
+              : (isElite ? "★ ELITE — rischio e premi raddoppiati! " : "")
+                + (NODE_TOOLTIPS[node.type] || node.type);
+
+            // Etichetta nodo — tipo formattato
+            const labelColor = visited             ? C.dim
+              : isBoss                             ? "#ff6688"
+              : isActive && dangerNode             ? "#ff8888"
+              : isActive && safeNode               ? "#88ffaa"
+              : isActive && secretUnlocked         ? "#ddaaff"
+              : isActive                           ? C.gold
+              : "#444460";
+
             return (
-              <line key={`${fromId}-${toId}`}
-                x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                stroke={col} strokeWidth={sw} strokeDasharray={dash}
-                strokeLinecap="round"
-              />
+              <Tooltip key={node.id} text={tooltip}>
+                <div
+                  onClick={() => isActive && !effectivelyHidden ? onSelectNode(node, rIdx) : null}
+                  style={{
+                    position:"absolute",
+                    left: cx - NW/2, top: cy - NH/2,
+                    width: NW, height: NH,
+                    display:"flex", flexDirection:"column",
+                    alignItems:"center", justifyContent:"center",
+                    gap:"2px",
+                    border: `${borderWidth}px solid ${borderCol}`,
+                    background: bgCol,
+                    borderRadius:"0",
+                    cursor: isActive && !effectivelyHidden ? "pointer" : "default",
+                    opacity: visited ? 0.35 : effectivelyHidden ? 0.5 : 1,
+                    zIndex: isBoss ? 3 : isActive ? 2 : 1,
+                    boxShadow: shadow,
+                    transition:"transform 0.1s, box-shadow 0.2s",
+                    animation,
+                    userSelect:"none",
+                  }}
+                  onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.08)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; }}
+                  // Touch feedback
+                  onTouchStart={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.08)"; }}
+                  onTouchEnd={e   => { e.currentTarget.style.transform="scale(1)"; }}
+                >
+                  {/* Emoji icona — più grande */}
+                  <span style={{
+                    fontSize: isBoss ? "28px" : "22px",
+                    lineHeight:1,
+                    filter: isActive ? `drop-shadow(0 0 5px ${borderCol})` : "none",
+                  }}>
+                    {icon}
+                  </span>
+
+                  {/* Etichetta tipo */}
+                  <span style={{
+                    fontSize: isBoss ? "10px" : "9px",
+                    color: labelColor,
+                    fontFamily:FONT, letterSpacing:"0.5px", fontWeight:"bold",
+                    textAlign:"center", lineHeight:"1.1",
+                    maxWidth:`${NW - 6}px`,
+                    overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis",
+                    textShadow: isActive ? `0 0 6px ${borderCol}` : "none",
+                  }}>
+                    {label.toUpperCase()}
+                  </span>
+
+                  {/* Badge ELITE */}
+                  {isElite && (
+                    <span style={{
+                      position:"absolute", top:-7, right:-7,
+                      fontSize:"9px", background:C.orange, color:"#000",
+                      width:"16px", height:"16px",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontWeight:"bold",
+                      boxShadow:`0 0 8px ${C.orange}cc`,
+                    }}>★</span>
+                  )}
+                </div>
+              </Tooltip>
             );
-          })}
-        </svg>
+          }))}
+        </div>
+      </div>
 
-        {/* ── NODI ── */}
-        {map.rows.map((row, rIdx) => row.map(node => {
-          const { cx, cy } = nodePos[node.id];
-          const visited   = visitedNodes.includes(node.id);
-          const reachable = reachableNodes.includes(node.id);
-          const isActive  = reachable && !visited;
-          const isBoss    = node.type === "boss";
-          const isSecret  = !!node.secret;
-          const isElite   = !!node.elite && !visited;
-          // Modificatore bioma 3 (Cinese, Lanterne Rosse): soglia segreto abbassata
-          const secretThreshold = BIOME_MODIFIERS[currentBiome]?.secretFortuneThreshold ?? 2;
-          const secretUnlocked = isSecret && playerFortuna >= secretThreshold;
-          const effectivelyHidden = isSecret && !secretUnlocked && !visited;
-
-          const icon = effectivelyHidden ? "🔒" : isSecret ? "🔮" : NODE_ICONS[node.type] || "?";
-          const dangerNode = DANGER_TYPES.has(node.type);
-          const safeNode   = SAFE_TYPES.has(node.type);
-
-          // Colori nodo (vedi LEGEND_CHIPS — devono restare allineati)
-          const borderWidth = isBoss ? 3 : isElite || (isActive && secretUnlocked) ? 2.5 : isActive ? 2 : 1;
-          const borderCol = visited     ? "#1a1a28"
-            : isBoss      ? "#ff2244"
-            : isElite     ? C.orange
-            : isActive && secretUnlocked ? "#cc99ff"     // 🔮 segreto sbloccato → viola
-            : isActive && dangerNode ? "#ff4444"
-            : isActive && safeNode   ? "#44dd88"
-            : isActive    ? C.gold
-            : "#252538";
-
-          const bgCol = visited        ? "#080808"
-            : isBoss               ? "#1a0000"
-            : isElite              ? "#1a0e00"
-            : isActive && secretUnlocked ? "#150a1a"     // 🔮 sfondo viola scuro
-            : isActive && dangerNode ? "#180000"
-            : isActive && safeNode   ? "#001800"
-            : isActive             ? "#0a0a14"
-            : "#0a0a0a";
-
-          const shadow = isActive
-            ? isBoss
-              ? `0 0 22px ${C.red}dd, 0 0 44px ${C.red}55, 3px 3px 0 #000`
-              : isElite
-                ? `0 0 16px ${C.orange}cc, 3px 3px 0 #000`
-                : secretUnlocked
-                  ? `0 0 16px #cc99ffcc, 3px 3px 0 #000`
-                  : dangerNode
-                    ? `0 0 14px #ff4444cc, 3px 3px 0 #000`
-                    : safeNode
-                      ? `0 0 14px #44dd88cc, 3px 3px 0 #000`
-                      : `0 0 14px ${C.gold}cc, 3px 3px 0 #000`
-            : "none";
-
-          const animation = isBoss && isActive ? "bossGlow 1.8s infinite"
-            : isActive ? "slotGlow 2s infinite"
-            : "none";
-
-          const label = node.type === "boss"
-            ? (node.bossName || "BOSS")
-            : effectivelyHidden ? "???"
-            : node.type;
-
-          const tooltip = effectivelyHidden
-            ? `🔒 Nodo Segreto — richiede Fortuna ≥ ${secretThreshold}`
-            : isSecret ? "🔮 Nodo Segreto — evento raro con ricompense uniche!"
-            : (isElite ? "★ ELITE — rischio e premi raddoppiati! " : "")
-            + (NODE_TOOLTIPS[node.type] || node.type);
-
-          return (
-            <Tooltip key={node.id} text={tooltip}>
-              <div
-                onClick={() => isActive && !effectivelyHidden ? onSelectNode(node, rIdx) : null}
-                style={{
-                  position:"absolute",
-                  left: cx - NW/2, top: cy - NH/2,
-                  width: NW, height: NH,
-                  display:"flex", flexDirection:"column",
-                  alignItems:"center", justifyContent:"center",
-                  border: `${borderWidth}px solid ${borderCol}`,
-                  background: bgCol,
-                  borderRadius:"0",
-                  cursor: isActive && !effectivelyHidden ? "pointer" : "default",
-                  opacity: visited ? 0.32 : effectivelyHidden ? 0.5 : 1,
-                  zIndex: isBoss ? 3 : isActive ? 2 : 1,
-                  boxShadow: shadow,
-                  transition:"transform 0.12s, box-shadow 0.2s",
-                  animation,
-                  backdropFilter: isActive ? "blur(2px)" : "none",
-                }}
-                onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; }}
-              >
-                <span style={{fontSize: isBoss ? "24px" : "18px", lineHeight:1, filter: isActive ? "drop-shadow(0 0 4px currentColor)" : "none"}}>{icon}</span>
-
-                {/* Badge Elite */}
-                {isElite && (
-                  <span style={{position:"absolute", top:-6, right:-6, fontSize:"9px", background:C.orange, color:"#000", borderRadius:"0", width:"14px", height:"14px", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:"bold", boxShadow:`0 0 6px ${C.orange}cc, 0 0 12px ${C.orange}55`}}>★</span>
-                )}
-
-                <span style={{
-                  fontSize: isBoss ? "9px" : "8px",
-                  color: visited ? C.dim
-                    : isBoss ? "#ff4466"
-                    : isActive && dangerNode ? "#ff6666"
-                    : isActive && safeNode   ? "#66ee99"
-                    : isActive ? C.gold
-                    : "#444460",
-                  textAlign:"center", lineHeight:"1.1", marginTop:"2px",
-                  maxWidth:`${NW - 4}px`, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis",
-                  fontFamily:FONT, letterSpacing:"0.5px",
-                  textShadow: isActive ? "0 0 6px currentColor" : "none",
-                }}>
-                  {label}
-                </span>
-              </div>
-            </Tooltip>
-          );
-        }))}
+      {/* ── LEGENDA FOOTER — strip sottile ─────────────────────── */}
+      <div style={{
+        flexShrink:0,
+        display:"flex", alignItems:"center", gap:"10px",
+        justifyContent:"center", flexWrap:"wrap",
+        padding:"5px 10px",
+        borderTop:`1px solid ${C.dim}44`,
+        background:"#080810",
+      }}>
+        {LEGEND.map(({ col, label }) => (
+          <span key={label} style={{
+            display:"flex", alignItems:"center", gap:"3px",
+            color: col, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
+          }}>
+            <span style={{
+              display:"inline-block", width:"7px", height:"7px",
+              background: col,
+              boxShadow:`0 0 4px ${col}`,
+            }}/>
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   );
