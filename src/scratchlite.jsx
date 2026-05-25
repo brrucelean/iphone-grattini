@@ -552,7 +552,7 @@ export default function Grattini() {
            con z-index:500 così sia il DESK che l'intro risultano invisibili sotto. */}
       {scratchingCard && player && (
         <div style={{
-          position:"absolute", inset:0, zIndex:500,
+          position:"fixed", inset:0, zIndex:9000,
           background: bioPal.bg,
           display:"flex", flexDirection:"column",
           overflow:"hidden",
@@ -1138,49 +1138,7 @@ export default function Grattini() {
                 })()}
               </>)}
 
-              {/* Scratch inline */}
-              {scratchingCard && (
-                <ScratchCardView
-                  card={scratchingCard}
-                  nailState={getActiveNailState()}
-                  nailImplant={player.nails[player.activeNail]?.implant || null}
-                  fortune={effectiveFortune}
-                  grattaMania={player.grattaMania}
-                  equippedGrattatore={player.equippedGrattatore}
-                  relicEffects={playerRelicEffects}
-                  ambidestri={player.skills?.includes("ambidestri")}
-                  onCellScratch={handleCellScratch}
-                  onNailDamage={handleNailDamage}
-                  onItemFound={handleCardItemFound}
-                  onDone={(r) => { setFirstScratchShown(true); handleScratchDone(r); }}
-                  showFirstWarning={!firstScratchShown}
-                  lastWonPrize={player.lastWonPrize || 0}
-                  extraTiles={player.extraTiles || []}
-                  onExtraTileUsed={(tileId, tileIdx) => {
-                    // Attiva effetto tile e rimuovila
-                    if (tileId === "monetaCinese") {
-                      updatePlayer(p => {
-                        const tiles = [...(p.extraTiles||[])];
-                        tiles.splice(tileIdx, 1);
-                        return {...p, extraTiles: tiles, monetaCineseActive: true};
-                      });
-                      addLog("🀄 MONETA CINESE ATTIVATA! La prossima grattata sarà x5 GARANTITA!", C.gold);
-                    }
-                  }}
-                  onCardActivate={(event) => {
-                    if (event === "maledetto_curse") {
-                      updatePlayer(p => ({
-                        ...p,
-                        nails: p.nails.map(n =>
-                          n.state !== "morta" && n.state !== "marcia" && n.state !== "sanguinante"
-                            ? {...n, state: "sanguinante"} : n
-                        ),
-                      }));
-                      addLog("💀 LA MALEDIZIONE SI APRE! Tutte le unghie sanguinano!", C.red);
-                    }
-                  }}
-                />
-              )}
+              {/* Scratch inline rimosso — gestito dal full-screen overlay (position:fixed zIndex:9000) */}
             </div>
           )}
 
