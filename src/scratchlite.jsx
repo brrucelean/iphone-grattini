@@ -87,6 +87,7 @@ export default function Grattini() {
   const [hoveredIntroIdx, setHoveredIntroIdx] = useState(-1);
   const [nailSanguinanteModal, setNailSanguinanteModal] = useState(false);
   const [cellaProgress, setCellaProgress] = useState(0); // graffi al muro in cella (0-8 = evaso)
+  const [tutorialPage, setTutorialPage] = useState(0); // 0 = unghie, 1 = meccaniche
   // ─── HOOK: useMeta ───
   const {
     achievements, setAchievements,
@@ -238,7 +239,7 @@ export default function Grattini() {
       setCurrentNode({ type:"tabaccaio" });
       setScreen("shop");
     } else {
-      setScreen("tutorialNails");
+      setTutorialPage(0); setScreen("tutorialNails");
     }
     addLog(`Benvenuto a ${BIOMES[startBiome].name}!`, C.cyan);
     addLog("Nonno Carmelo ti ferma al bancone. Ha tre biglietti e mani che tremano. Gratti tu, scegli tu.", C.gold);
@@ -541,7 +542,7 @@ export default function Grattini() {
       )}
 
       {/* ── DESK — area di gioco centrale, scrollabile ── */}
-      <div style={{flex:1, minHeight:0, overflowY:"auto", overflowX:"hidden", display:"flex", flexDirection:"column", alignItems:"center",
+      <div style={{flex:1, minHeight:0, overflowY: screen === "tutorialNails" ? "hidden" : "auto", overflowX:"hidden", display:"flex", flexDirection:"column", alignItems:"center",
         backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)",
         backgroundAttachment:"local", position:"relative",
       }}>
@@ -768,68 +769,119 @@ export default function Grattini() {
         </div>
       )}
 
-      {/* ═══ TUTORIAL UNGHIE ═══ */}
+      {/* ═══ TUTORIAL UNGHIE — paginated, no scroll ═══ */}
       {screen === "tutorialNails" && (
-        <div style={{maxWidth:"560px", width:"100%", textAlign:"center", margin:"auto", position:"relative", zIndex:1}}>
-          <div style={{...S.panel, background:"#0a0a18", border:`2px solid ${C.cyan}`}}>
-            <div style={{...S.h2, color:C.cyan, marginBottom:"6px"}}>🖐 Le tue unghie sono la tua vita</div>
-            <div style={{color:C.dim, fontSize:"11px", letterSpacing:"2px", marginBottom:"18px"}}>TUTORIAL — leggi bene, non si torna indietro</div>
-
-            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px", marginBottom:"18px", textAlign:"left"}}>
-              {[
-                { state:"sana",        label:"Sana",         color:C.green,   desc:"Unghia intatta. Premio pieno." },
-                { state:"graffiata",   label:"Graffiata",    color:C.gold,    desc:"Primo segno di usura. Premio pieno." },
-                { state:"sanguinante", label:"Sanguinante",  color:C.orange,  desc:"Fa male. Premio ridotto al 50%." },
-                { state:"marcia",      label:"Marcia",       color:C.red,     desc:"Pericolosa. Premio ridotto al 25%." },
-                { state:"morta",       label:"Morta ✝",      color:"#555",    desc:"Inutilizzabile. Passi alla prossima." },
-                { state:"kawaii",      label:"Kawaii ♡",     color:C.pink,    desc:"Speciale. Premio x2. Usala bene." },
-              ].map(({state, label, color, desc}) => (
-                <div key={state} style={{
-                  background:"#111122", border:`1px solid ${color}44`,
-                  borderRadius:"0", padding:"8px 10px",
-                  display:"flex", alignItems:"flex-start", gap:"8px",
-                }}>
-                  <div style={{
-                    width:"10px", height:"10px", borderRadius:"0",
-                    background:color, flexShrink:0, marginTop:"3px",
-                    boxShadow:"none",
-                  }}/>
-                  <div>
-                    <div style={{color, fontSize:"12px", fontWeight:"bold"}}>{label}</div>
-                    <div style={{color:C.dim, fontSize:"10px", lineHeight:"1.4"}}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{
-              background:"#0d1200", border:`1px solid ${C.gold}55`,
-              borderRadius:"0", padding:"10px 14px", marginBottom:"18px", textAlign:"left",
-            }}>
-              <div style={{color:C.gold, fontSize:"11px", fontWeight:"bold", marginBottom:"6px"}}>⚠ COME SI CONSUMANO</div>
-              <div style={{color:C.text, fontSize:"11px", lineHeight:"1.7"}}>
-                Ogni <strong style={{color:C.bright}}>3 celle grattate</strong> l'unghia attiva degrada di un livello.<br/>
-                Hai <strong style={{color:C.bright}}>5 unghie</strong> — quando una muore si passa automaticamente alla prossima.<br/>
-                Quando muoiono <strong style={{color:C.red}}>tutte e 5</strong> → <strong style={{color:C.red}}>GAME OVER</strong>.<br/>
-                In combattimento grattare consuma l'unghia esattamente come i biglietti normali.
-              </div>
-            </div>
-
-            <div style={{
-              background:"#0a0808", border:`1px solid ${C.cyan}44`,
-              borderRadius:"0", padding:"8px 14px", marginBottom:"20px", textAlign:"left",
-            }}>
-              <div style={{color:C.cyan, fontSize:"11px", fontWeight:"bold", marginBottom:"4px"}}>💡 CONSIGLIO DEL VECCHIO</div>
-              <div style={{color:C.dim, fontSize:"11px", lineHeight:"1.6"}}>
-                Compra cerotti e disinfettanti al tabaccaio. Non aspettare che sia troppo tardi.<br/>
-                L'unghia Kawaii vale doppio — tienila per le carte grosse.
-              </div>
-            </div>
-
-            <Btn variant="gold" onClick={() => setScreen("introScratch")} style={{fontSize:"14px", padding:"10px 32px"}}>
-              Ho capito — iniziamo! →
-            </Btn>
+        <div style={{
+          width:"100%", height:"100%", maxWidth:"560px",
+          display:"flex", flexDirection:"column",
+          padding:"10px 14px 12px", boxSizing:"border-box",
+          position:"relative", zIndex:1,
+        }}>
+          {/* ── Header comune ── */}
+          <div style={{textAlign:"center", flexShrink:0, marginBottom:"8px"}}>
+            <div style={{...S.h2, color:C.cyan, marginBottom:"2px", fontSize:"15px"}}>🖐 Le tue unghie sono la tua vita</div>
+            <div style={{color:C.dim, fontSize:"10px", letterSpacing:"2px"}}>TUTORIAL — leggi bene, non si torna indietro</div>
           </div>
+
+          {/* ── Page dots ── */}
+          <div style={{display:"flex", justifyContent:"center", gap:"8px", marginBottom:"8px", flexShrink:0}}>
+            {[0,1].map(i => (
+              <div key={i} style={{
+                width:"8px", height:"8px", borderRadius:"50%",
+                background: tutorialPage === i ? C.cyan : "#333",
+                border: `1px solid ${tutorialPage === i ? C.cyan : "#555"}`,
+                transition:"background 0.2s",
+              }}/>
+            ))}
+          </div>
+
+          {/* ── Slide container ── */}
+          <div style={{flex:1, minHeight:0, position:"relative", overflow:"hidden"}}>
+
+            {/* SLIDE 0 — stati unghie */}
+            <div style={{
+              position:"absolute", inset:0,
+              display:"flex", flexDirection:"column",
+              opacity: tutorialPage === 0 ? 1 : 0,
+              transform: tutorialPage === 0 ? "translateX(0)" : "translateX(-100%)",
+              transition:"opacity 0.25s, transform 0.25s",
+              pointerEvents: tutorialPage === 0 ? "auto" : "none",
+            }}>
+              <div style={{
+                flex:1, display:"grid", gridTemplateColumns:"1fr 1fr",
+                gap:"7px", alignContent:"start", overflowY:"hidden",
+                marginBottom:"10px",
+              }}>
+                {[
+                  { state:"sana",        label:"Sana",         color:C.green,   desc:"Unghia intatta. Premio pieno." },
+                  { state:"graffiata",   label:"Graffiata",    color:C.gold,    desc:"Primo segno di usura. Premio pieno." },
+                  { state:"sanguinante", label:"Sanguinante",  color:C.orange,  desc:"Fa male. Premio ridotto al 50%." },
+                  { state:"marcia",      label:"Marcia",       color:C.red,     desc:"Pericolosa. Premio ridotto al 25%." },
+                  { state:"morta",       label:"Morta ✝",      color:"#555",    desc:"Inutilizzabile. Passi alla prossima." },
+                  { state:"kawaii",      label:"Kawaii ♡",     color:C.pink,    desc:"Speciale. Premio x2. Usala bene." },
+                ].map(({state, label, color, desc}) => (
+                  <div key={state} style={{
+                    background:"#111122", border:`1px solid ${color}44`,
+                    padding:"8px 10px",
+                    display:"flex", alignItems:"flex-start", gap:"7px",
+                  }}>
+                    <div style={{width:"9px", height:"9px", background:color, flexShrink:0, marginTop:"3px"}}/>
+                    <div>
+                      <div style={{color, fontSize:"12px", fontWeight:"bold"}}>{label}</div>
+                      <div style={{color:C.dim, fontSize:"10px", lineHeight:"1.4"}}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Btn variant="cyan" onClick={() => setTutorialPage(1)} style={{fontSize:"13px", padding:"10px", flexShrink:0}}>
+                Avanti — come funzionano →
+              </Btn>
+            </div>
+
+            {/* SLIDE 1 — meccaniche */}
+            <div style={{
+              position:"absolute", inset:0,
+              display:"flex", flexDirection:"column",
+              opacity: tutorialPage === 1 ? 1 : 0,
+              transform: tutorialPage === 1 ? "translateX(0)" : "translateX(100%)",
+              transition:"opacity 0.25s, transform 0.25s",
+              pointerEvents: tutorialPage === 1 ? "auto" : "none",
+              gap:"8px",
+            }}>
+              <div style={{
+                background:"#0d1200", border:`1px solid ${C.gold}55`,
+                padding:"10px 13px", textAlign:"left", flexShrink:0,
+              }}>
+                <div style={{color:C.gold, fontSize:"11px", fontWeight:"bold", marginBottom:"5px"}}>⚠ COME SI CONSUMANO</div>
+                <div style={{color:C.text, fontSize:"11px", lineHeight:"1.65"}}>
+                  Ogni <strong style={{color:C.bright}}>3 celle grattate</strong> l'unghia degrada di un livello.<br/>
+                  Hai <strong style={{color:C.bright}}>5 unghie</strong> — quando una muore passi alla prossima.<br/>
+                  Quando muoiono <strong style={{color:C.red}}>tutte e 5</strong> → <strong style={{color:C.red}}>GAME OVER</strong>.<br/>
+                  In combattimento grattare consuma l'unghia esattamente come i biglietti normali.
+                </div>
+              </div>
+              <div style={{
+                background:"#0a0808", border:`1px solid ${C.cyan}44`,
+                padding:"10px 13px", textAlign:"left", flexShrink:0,
+              }}>
+                <div style={{color:C.cyan, fontSize:"11px", fontWeight:"bold", marginBottom:"4px"}}>💡 CONSIGLIO DEL VECCHIO</div>
+                <div style={{color:C.dim, fontSize:"11px", lineHeight:"1.6"}}>
+                  Compra cerotti e disinfettanti al tabaccaio. Non aspettare che sia troppo tardi.<br/>
+                  L'unghia Kawaii vale doppio — tienila per le carte grosse.
+                </div>
+              </div>
+              <div style={{flex:1}}/>
+              <div style={{display:"flex", gap:"8px", flexShrink:0}}>
+                <Btn onClick={() => setTutorialPage(0)} style={{fontSize:"12px", padding:"10px 14px", opacity:0.7}}>
+                  ← Indietro
+                </Btn>
+                <Btn variant="gold" onClick={() => setScreen("introScratch")} style={{fontSize:"13px", padding:"10px", flex:1}}>
+                  Ho capito — iniziamo! →
+                </Btn>
+              </div>
+            </div>
+
+          </div>{/* /slide container */}
         </div>
       )}
 
