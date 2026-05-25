@@ -951,7 +951,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
       ) : (
       <div style={{
         display:"grid", gridTemplateColumns:`repeat(${card.cols}, 1fr)`,
-        gap:"4px", maxWidth:"300px", margin:"6px auto 8px",
+        gap:"4px", maxWidth:"min(340px, 94vw)", width:"100%", margin:"6px auto 8px",
         padding: (bloodyCells.size > 0 || scratchedWhileMarcia.current) ? "4px" : 0,
         background: (bloodyCells.size > 0 || scratchedWhileMarcia.current)
           ? "radial-gradient(circle at 30% 40%, rgba(170,0,15,0.18), transparent 60%), radial-gradient(circle at 70% 70%, rgba(120,0,10,0.14), transparent 55%)"

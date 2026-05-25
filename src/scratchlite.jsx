@@ -459,6 +459,15 @@ export default function Grattini() {
         ::-webkit-scrollbar-thumb { background: ${C.dim}; border-radius: 3px; }
         /* Forza il cursore unghia su tutto — sovrascrive pointer di sistema su button/link */
         button, a, input, select, [role="button"], [tabindex] { cursor: inherit !important; }
+        /* ── MOBILE / iPhone: tap target Apple HIG (min 44px) ── */
+        @media (max-width: 768px) {
+          button { min-height: 44px; }
+          /* slider volume: pollice più grande */
+          input[type="range"] { height: 28px; }
+          input[type="range"]::-webkit-slider-thumb { width: 22px; height: 22px; }
+          /* niente hover-stick su touch: i :hover restano attaccati dopo il tap */
+          * { -webkit-touch-callout: none; }
+        }
       `}</style>
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}

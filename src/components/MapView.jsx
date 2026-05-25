@@ -11,7 +11,11 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
   const rowsCount = map.rows.length || 1;
   const availH = Math.max(360, (typeof window !== "undefined" ? window.innerHeight : 900) - 240);
   const ROW_H = Math.max(50, Math.min(64, Math.floor(availH / rowsCount)));
-  const W = 860;   // larghezza canvas — compatta, nodi vicini e ordinati (panel è wrapper 1100)
+  // Larghezza canvas RESPONSIVA: su mobile usa la larghezza viewport disponibile
+  // (prima era fissa a 860 con overflow:hidden → i nodi a destra venivano tagliati
+  // e diventavano non cliccabili su iPhone).
+  const vw = typeof window !== "undefined" ? window.innerWidth : 900;
+  const W = Math.min(860, vw - 20);
   const NW = 72, NH = 52;
   const totalH = rowsCount * ROW_H;
 
@@ -30,11 +34,14 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
     }));
   }, []);
 
-  // Posizioni pixel centrate per ogni nodo
+  // Posizioni pixel centrate per ogni nodo.
+  // Inset di NW/2 ai bordi: x=0 → centro a NW/2, x=1 → centro a W-NW/2,
+  // così i nodi estremi restano interamente dentro il canvas (no clip su mobile).
   const nodePos = {};
+  const usableW = Math.max(NW, W - NW);
   map.rows.forEach((row, rIdx) => {
     row.forEach(node => {
-      nodePos[node.id] = { cx: node.x * W, cy: rIdx * ROW_H + ROW_H / 2 };
+      nodePos[node.id] = { cx: NW / 2 + node.x * usableW, cy: rIdx * ROW_H + ROW_H / 2 };
     });
   });
 
