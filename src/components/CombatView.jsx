@@ -114,6 +114,7 @@ export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailS
       height:`${COMBAT_CARD_H}px`,
       boxShadow: disabled ? "none" : `0 0 14px ${C.gold}66, inset 0 0 20px rgba(0,0,0,0.5)`,
       cursor: disabled ? "default" : "crosshair",
+      touchAction: "none",
     }} {...evts}>
 
       {/* ── Sfondo categoria visibile SOLO dopo grattatura ── */}
@@ -124,7 +125,7 @@ export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailS
         <canvas ref={canvasRef} width={220} height={160}
           style={{
             position:"absolute", inset:0, width:"100%", height:"100%",
-            display:"block", cursor: nailCursor,
+            display:"block", cursor: nailCursor, touchAction:"none",
           }}
         />
       )}

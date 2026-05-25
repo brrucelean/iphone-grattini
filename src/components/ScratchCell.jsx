@@ -10,6 +10,7 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const revealed = useRef(cell.scratched);
+  const scratchTicks = useRef(0); // throttle del check getImageData (costoso su mobile)
   // Pattern pseudo-random stabile basato su idx — così ogni cella sporca ha macchie di sangue coerenti
   // tra i render (altrimenti ballerebbero ad ogni update di React).
   const bloodSplatter = useRef(null);
@@ -78,7 +79,10 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
     ctx.fill();
     AudioEngine.scratch();
     ParticleSystem.spawn(clientX, clientY, 9, bloodMode);
-    // Check how much is scratched
+    // Check how much is scratched — getImageData è costoso, throttle a 1 ogni 3
+    // chiamate (su mobile il touchmove spara decine di eventi/secondo).
+    scratchTicks.current += 1;
+    if (scratchTicks.current % 3 !== 0) return;
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let transparent = 0;
     for (let i=3; i<data.length; i+=4) if (data[i]<100) transparent++;
