@@ -404,15 +404,20 @@ export default function Grattini() {
   return (
     <div style={{
       position:"fixed", top:0, left:0,
-      width:"100vw", height:"100vh",
+      width:"100%", height:"100%",
       background: bioPal.bg,
       display:"flex", alignItems:"center", justifyContent:"center",
       overflow:"hidden",
+      /* safe-area: padding sotto il Dynamic Island e l'home indicator */
+      paddingTop: "env(safe-area-inset-top)",
+      paddingBottom: "env(safe-area-inset-bottom)",
+      paddingLeft: "env(safe-area-inset-left)",
+      paddingRight: "env(safe-area-inset-right)",
     }}>
     {/* ── FRAME FLUIDO — riempie tutto il viewport, layout responsive ── */}
     <div style={{...S.container, cursor: globalNailCursor,
-      width: "100vw",
-      height: "100vh",
+      width: "100%",
+      height: "100%",
       animation: screenShake ? "screenShake 0.3s ease-in-out" : "none",
       filter: neonDim < 1 ? `saturate(${neonDim}) brightness(${0.6 + neonDim * 0.4})` : "none",
       transition: "filter 1.5s ease",
@@ -572,7 +577,11 @@ export default function Grattini() {
       )}
 
       {/* ── DESK — area di gioco centrale, scrollabile ── */}
-      <div style={{flex:1, minHeight:0, overflowY: screen === "tutorialNails" ? "hidden" : "auto", overflowX:"hidden", display:"flex", flexDirection:"column", alignItems:"center",
+      <div style={{flex:1, minHeight:0,
+        overflowY: screen === "tutorialNails" ? "hidden" : "auto",
+        overflowX:"hidden",
+        WebkitOverflowScrolling:"touch", /* momentum scroll iOS */
+        display:"flex", flexDirection:"column", alignItems:"center",
         backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)",
         backgroundAttachment:"local", position:"relative",
       }}>
