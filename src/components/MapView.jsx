@@ -402,6 +402,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     border: `${borderWidth}px solid ${borderCol}`,
                     background: bgCol,
                     borderRadius:"0",
+                    overflow:"hidden",
                     cursor: isActive && !effectivelyHidden ? "pointer" : "default",
                     opacity: visited ? 0.35 : effectivelyHidden ? 0.5 : 1,
                     zIndex: isBoss ? 3 : isActive ? 2 : 1,
@@ -425,15 +426,19 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     {icon}
                   </span>
 
-                  {/* Etichetta tipo */}
+                  {/* Etichetta tipo — 2 righe max, no ellipsis che tronca male */}
                   <span style={{
-                    fontSize: isBoss ? "10px" : "9px",
+                    fontSize: isBoss ? "9px" : "8px",
                     color: labelColor,
-                    fontFamily:FONT, letterSpacing:"0.5px", fontWeight:"bold",
-                    textAlign:"center", lineHeight:"1.1",
-                    maxWidth:`${NW - 6}px`,
-                    overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis",
-                    textShadow: isActive ? `0 0 6px ${borderCol}` : "none",
+                    fontFamily:FONT, fontWeight:"bold",
+                    textAlign:"center", lineHeight:"1.15",
+                    width:`${NW - 8}px`,
+                    display:"-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient:"vertical",
+                    overflow:"hidden",
+                    wordBreak:"break-word",
+                    textShadow: isActive ? `0 0 5px ${borderCol}` : "none",
                   }}>
                     {label.toUpperCase()}
                   </span>

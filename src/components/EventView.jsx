@@ -421,9 +421,12 @@ export function EventView({ node, player, onChoice }) {
   const portraitCorners = cornerBrackets(pal[2], 9, -2, 1, `0 0 4px ${pal[2]}66`);
   const dialogCorners = cornerBrackets(pal[1], 9, -2, 1, `0 0 4px ${pal[1]}66`);
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
   return (
     <div style={{
-      ...S.panel, maxWidth:"900px", margin:"10px auto", padding:"18px 20px",
+      ...S.panel, maxWidth:"900px", margin:"10px auto",
+      padding: isMobile ? "12px 12px" : "18px 20px",
       position:"relative",
       boxShadow:`0 0 18px ${pal[0]}33, inset 0 0 24px #00000088`,
     }}>
@@ -451,16 +454,30 @@ export function EventView({ node, player, onChoice }) {
         </div>
       </div>
 
-      {/* 2-column layout: portrait left, dialog right */}
-      <div style={{display:"flex", gap:"16px", alignItems:"flex-start", justifyContent:"center"}}>
-        {/* Portrait — multicolore se disponibile */}
+      {/* ── Layout: su mobile stack verticale, su desktop 2 colonne ── */}
+      <div style={{
+        display:"flex",
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? "10px" : "16px",
+        alignItems: isMobile ? "stretch" : "flex-start",
+        justifyContent:"center",
+      }}>
+        {/* ── RITRATTO ── */}
         {bigArt && (
-          <div style={{flexShrink:0, width:"200px", position:"relative"}}>
+          <div style={{
+            flexShrink:0,
+            width: isMobile ? "auto" : "200px",
+            maxWidth: isMobile ? "160px" : "200px",
+            margin: isMobile ? "0 auto" : "0",
+            position:"relative",
+          }}>
             <span style={portraitCorners.tl} /><span style={portraitCorners.tr} />
             <span style={portraitCorners.bl} /><span style={portraitCorners.br} />
             <pre style={{
-              ...S.pre, fontSize:"8px", lineHeight:"1.15",
-              border:`1px solid ${pal[2]}55`, padding:"8px 8px",
+              ...S.pre,
+              fontSize: isMobile ? "7px" : "8px",
+              lineHeight:"1.15",
+              border:`1px solid ${pal[2]}55`, padding:"6px 8px",
               background:"#000000", whiteSpace:"pre", overflow:"hidden",
               boxShadow:`inset 0 0 18px ${pal[0]}22`,
               margin:0,
@@ -482,72 +499,78 @@ export function EventView({ node, player, onChoice }) {
                   })
               }
             </pre>
-            {/* Nameplate sotto il ritratto */}
             <div style={{
-              marginTop:"6px", textAlign:"center",
-              fontSize:"9px", color:pal[2], letterSpacing:"2px",
-              fontFamily:FONT, opacity:0.85,
+              marginTop:"4px", textAlign:"center",
+              fontSize:"8px", color:pal[2], letterSpacing:"2px",
+              fontFamily:FONT, opacity:0.7,
             }}>
               ─ RITRATTO ─
             </div>
           </div>
         )}
 
-        {/* Dialog + choices */}
-        <div style={{flex:1, minWidth:0, maxWidth:"480px"}}>
+        {/* ── DIALOGO + SCELTE — full width su mobile ── */}
+        <div style={{flex:1, minWidth:0, width: isMobile ? "100%" : undefined}}>
           {/* Dialog blockquote con typing */}
-          <div style={{position:"relative", marginBottom:"14px"}}>
+          <div style={{position:"relative", marginBottom:"12px"}}>
             <span style={dialogCorners.tl} /><span style={dialogCorners.tr} />
             <span style={dialogCorners.bl} /><span style={dialogCorners.br} />
             <div style={{
-              border:`1px solid ${pal[1]}66`, padding:"12px 14px",
-              background:"#000000",
-              minHeight:"70px", cursor:"pointer",
-              boxShadow:`inset 0 0 16px ${pal[1]}11`,
+              border:`2px solid ${pal[1]}88`,
+              padding: isMobile ? "10px 12px" : "12px 14px",
+              background:"#020208",
+              minHeight:"60px", cursor:"pointer",
+              boxShadow:`inset 0 0 16px ${pal[1]}11, 0 0 8px ${pal[1]}22`,
             }} onClick={() => { if (!typingDone) setTypedChars(fullText.length); }}>
-              {/* Apri virgolette ornamentali */}
               <div style={{
-                color:pal[1], fontSize:"18px", lineHeight:"0.8",
+                color:pal[1], fontSize:"16px", lineHeight:"0.8",
                 opacity:0.7, marginBottom:"2px",
               }}>❝</div>
               <div style={{
-                color:C.text, fontSize:"12px", lineHeight:"1.65",
-                fontStyle:"italic", padding:"0 6px",
+                color:C.text,
+                fontSize: isMobile ? "13px" : "12px",
+                lineHeight:"1.7",
+                fontStyle:"italic", padding:"0 4px",
               }}>
                 {fullText.slice(0, typedChars)}
                 {!typingDone && <span style={{color:pal[0], animation:"blink 0.5s infinite"}}>▌</span>}
               </div>
-              {/* Chiudi virgolette quando typing è completo */}
               {typingDone && (
                 <div style={{
-                  color:pal[1], fontSize:"18px", lineHeight:"0.8",
+                  color:pal[1], fontSize:"16px", lineHeight:"0.8",
                   opacity:0.7, textAlign:"right", marginTop:"2px",
                 }}>❞</div>
               )}
               {!typingDone && (
                 <div style={{color:C.dim, fontSize:"9px", marginTop:"8px", textAlign:"right"}}>
-                  [click per completare]
+                  [tocca per completare]
                 </div>
               )}
             </div>
           </div>
 
-          {/* Choices — shown only when typing is done */}
+          {/* Choices */}
           {typingDone && (
             <div>
               <div style={{
                 fontSize:"9px", color:pal[2], letterSpacing:"2px",
-                fontFamily:FONT, marginBottom:"6px", opacity:0.85,
+                fontFamily:FONT, marginBottom:"8px", opacity:0.85,
               }}>
                 ─ SCELTE ─
               </div>
-              <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
+              <div style={{display:"flex", flexDirection:"column", gap:"7px"}}>
                 {ev.choices.map((ch, i) => (
                   <Tooltip key={i} text={ch.tooltip || ""}>
-                    <Btn onClick={() => onChoice(ch.action)}
+                    <Btn
+                      onClick={() => onChoice(ch.action)}
                       disabled={ch.condition === false}
                       variant={ch.action === "fight" ? "danger" : ch.action === "leave" ? "normal" : "gold"}
-                      style={{fontSize:"11px", padding:"6px 10px", width:"100%", textAlign:"left"}}>
+                      style={{
+                        fontSize: isMobile ? "12px" : "11px",
+                        padding: isMobile ? "9px 12px" : "6px 10px",
+                        width:"100%", textAlign:"left",
+                        lineHeight:"1.3",
+                      }}>
                       [{i+1}] {ch.label}
                     </Btn>
                   </Tooltip>
