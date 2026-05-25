@@ -4,6 +4,7 @@ import { SYMBOLS } from "../data/cards.js";
 import { NAIL_INFO } from "../data/nails.js";
 import { makeNailCursor } from "../utils/nail.js";
 import { AudioEngine, ParticleSystem } from "../audio.js";
+import { Haptics } from "../utils/haptics.js";
 
 // ─── SCRATCH CELL (canvas silver-layer drag-to-reveal) ──────
 export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPartialMatch, ambidestri=false, bloodMode=false, isBloody=false, themeColor=null }) {
@@ -11,6 +12,8 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
   const drawing = useRef(false);
   const revealed = useRef(cell.scratched);
   const scratchTicks = useRef(0); // throttle del check getImageData (costoso su mobile)
+  const [winAnim, setWinAnim] = useState(false); // glow burst al reveal vincente
+  const prevScratched = useRef(cell.scratched);
   // Pattern pseudo-random stabile basato su idx — così ogni cella sporca ha macchie di sangue coerenti
   // tra i render (altrimenti ballerebbero ad ogni update di React).
   const bloodSplatter = useRef(null);
@@ -40,6 +43,18 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
     }
     bloodSplatter.current = { blobs, drips };
   }
+
+  // ── Win glow + haptics al reveal ──────────────────────────────
+  useEffect(() => {
+    if (!prevScratched.current && cell.scratched) {
+      if (isWinSymbol) {
+        setWinAnim(true);
+        Haptics.win();
+        setTimeout(() => setWinAnim(false), 900);
+      }
+    }
+    prevScratched.current = cell.scratched;
+  }, [cell.scratched, isWinSymbol]);
 
   // Init silver layer on mount
   useEffect(() => {
@@ -78,6 +93,7 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
     if (ambidestri) { ctx.arc(x + 36, y - 10, 28, 0, Math.PI*2); }
     ctx.fill();
     AudioEngine.scratch();
+    Haptics.scratch();
     ParticleSystem.spawn(clientX, clientY, 9, bloodMode);
     // Check how much is scratched — getImageData è costoso, throttle a 1 ogni 3
     // chiamate (su mobile il touchmove spara decine di eventi/secondo).
@@ -118,10 +134,13 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
       border:`2px solid ${cell.scratched && isBloody ? "#ff2030" : (cell.scratched ? borderColor : unrevealedBorder)}`,
       borderRadius:"0", overflow:"hidden",
       background: cell.scratched ? bg : "#111",
-      boxShadow: cell.scratched && isBloody
-        ? "inset 0 0 14px #ff000088, 0 0 10px #ff000055"
-        : "none",
-      transition: "none",
+      boxShadow: winAnim
+        ? `0 0 0 3px ${C.green}cc, 0 0 24px ${C.green}88, 0 0 48px ${C.green}44`
+        : cell.scratched && isBloody
+          ? "inset 0 0 14px #ff000088, 0 0 10px #ff000055"
+          : "none",
+      animation: winAnim ? "winFlash 0.9s ease-out forwards" : "none",
+      transition: "box-shadow 0.15s",
     }}>
       {/* Symbol — visible only after reveal */}
       {cell.scratched && (

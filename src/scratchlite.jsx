@@ -22,6 +22,7 @@ import { MECH_RULES, CARD_TYPES } from "./data/cards.js";
 import { ASCII_TITLE } from "./data/art.js";
 import { AudioEngine } from "./audio.js";
 import { clamp } from "./utils/random.js";
+import { Haptics } from "./utils/haptics.js";
 import { degradeNailObj, makeNailCursor } from "./utils/nail.js";
 import { generateCard } from "./utils/card.js";
 import { generateMap } from "./utils/map.js";
@@ -88,6 +89,7 @@ export default function Grattini() {
   const [nailSanguinanteModal, setNailSanguinanteModal] = useState(false);
   const [cellaProgress, setCellaProgress] = useState(0); // graffi al muro in cella (0-8 = evaso)
   const [tutorialPage, setTutorialPage] = useState(0); // 0 = unghie, 1 = meccaniche
+  const [screenFade, setScreenFade] = useState(false); // flash nero tra schermate
   // ─── HOOK: useMeta ───
   const {
     achievements, setAchievements,
@@ -121,6 +123,25 @@ export default function Grattini() {
     if (screen === "shop") triggerNpcComment("shop");
     else if (screen === "combat") triggerNpcComment("combat");
     else if (screen === "map") triggerNpcComment("map");
+  }, [screen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Screen flash + haptics al cambio schermata ──────────────
+  const prevScreen = useRef(screen);
+  useEffect(() => {
+    if (prevScreen.current === screen) return;
+    const prev = prevScreen.current;
+    prevScreen.current = screen;
+    // Flash nero breve tra schermate (non per piccoli overlay)
+    const skipFlash = new Set(["cedole"]);
+    if (!skipFlash.has(screen) && !skipFlash.has(prev)) {
+      setScreenFade(true);
+      setTimeout(() => setScreenFade(false), 380);
+    }
+    // Haptics sulle transizioni più significative
+    if (screen === "gameOver")  Haptics.gameOver();
+    if (screen === "victory")   Haptics.victory();
+    if (screen === "combat")    Haptics.tap();
+    if (screen === "map")       Haptics.tap();
   }, [screen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updatePlayer = useCallback((updates) => {
@@ -469,7 +490,37 @@ export default function Grattini() {
           /* niente hover-stick su touch: i :hover restano attaccati dopo il tap */
           * { -webkit-touch-callout: none; }
         }
+        /* ── SCREEN TRANSITION ── */
+        @keyframes screenFadeIn { 0% { opacity:0; transform:scale(0.97); } 100% { opacity:1; transform:scale(1); } }
+        @keyframes screenFlash  { 0% { opacity:1; } 40% { opacity:1; } 100% { opacity:0; } }
+        /* ── GAME OVER EPIC ── */
+        @keyframes gameOverFlicker {
+          0%,100% { opacity:1; text-shadow: 0 0 16px #ff0022cc, 0 0 40px #ff002288; }
+          8%  { opacity:0.7; text-shadow: 0 0 4px #ff002244; }
+          10% { opacity:1; text-shadow: 0 0 24px #ff0022ff, 0 0 60px #ff002299; }
+          55% { opacity:1; text-shadow: 0 0 16px #ff0022cc, 0 0 40px #ff002288; }
+          56% { opacity:0.5; }
+          57% { opacity:1; text-shadow: 0 0 40px #ff0022ff; }
+        }
+        @keyframes gameOverBorder {
+          0%,100% { box-shadow: 0 0 28px #ff002277, inset 0 0 32px #ff002214; }
+          50%      { box-shadow: 0 0 60px #ff0022bb, inset 0 0 60px #ff002230; }
+        }
+        @keyframes gameOverSkull { 0% { transform:translateY(0) scale(1); } 10% { transform:translateY(-6px) scale(1.08); } 25% { transform:translateY(2px) scale(0.96); } 100% { transform:translateY(0) scale(1); } }
+        /* ── VICTORY EPIC ── */
+        @keyframes victoryGoldPulse { 0%,100% { text-shadow: 0 0 12px #ffd700bb, 0 0 40px #ffd70066; } 50% { text-shadow: 0 0 30px #ffd700ff, 0 0 80px #ffd700aa, 0 0 120px #ffcc0055; } }
+        @keyframes confettiDrop { 0% { transform:translateY(-20px) rotate(0deg); opacity:1; } 100% { transform:translateY(120px) rotate(720deg); opacity:0; } }
+        @keyframes statTileIn { 0% { transform:scale(0.7) translateY(10px); opacity:0; } 100% { transform:scale(1) translateY(0); opacity:1; } }
       `}</style>
+
+      {/* ═══ SCREEN TRANSITION FLASH ═══ */}
+      {screenFade && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:99997, pointerEvents:"none",
+          background:"#000",
+          animation:"screenFlash 0.38s ease-out forwards",
+        }}/>
+      )}
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
       {globalPainFlash > 0 && (
@@ -2426,11 +2477,13 @@ export default function Grattini() {
       {screen === "gameOver" && (
         <div style={{
           textAlign: "center", maxWidth: "560px", width: "100%",
-          background: "linear-gradient(180deg, #100000 0%, #05050b 100%)",
+          background: "linear-gradient(180deg, #120000 0%, #05050b 100%)",
           border: `2px solid ${C.red}`,
-          boxShadow: `0 0 28px ${C.red}77, inset 0 0 32px ${C.red}14`,
+          animation: "gameOverBorder 2s ease-in-out infinite",
           padding: "18px",
           position: "relative",
+          // CRT scanlines overlay via pseudo-gradient
+          backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px), linear-gradient(180deg, #120000 0%, #05050b 100%)",
         }}>
           {/* Corner brackets decorativi grandi */}
           {["tl","tr","bl","br"].map(pos => {
@@ -2450,14 +2503,21 @@ export default function Grattini() {
             );
           })}
 
-          {/* ASCII GAY OVER — wrapper block-level per evitare flow inline col badge */}
+          {/* Skull animato */}
+          <div style={{
+            fontSize:"52px", marginBottom:"6px",
+            animation:"gameOverSkull 1.8s ease-in-out infinite",
+            filter:`drop-shadow(0 0 14px ${C.red})`,
+          }}>💀</div>
+
+          {/* ASCII GAME OVER con flicker CRT */}
           <div style={{marginBottom: "12px"}}>
             <pre style={{
               ...S.pre, color: C.red, fontSize: "12px",
               display: "inline-block", lineHeight: 1.2,
-              textShadow: `0 0 12px ${C.red}aa, 0 0 28px ${C.red}55`,
+              animation: "gameOverFlicker 3.2s ease-in-out infinite",
               margin: 0,
-              textAlign: "left", // importante: preserva indent interno dell'ASCII
+              textAlign: "left",
             }}>{` ██████╗  █████╗ ██╗   ██╗
 ██╔════╝ ██╔══██╗╚██╗ ██╔╝
 ██║  ███╗███████║ ╚████╔╝
@@ -2634,23 +2694,39 @@ export default function Grattini() {
       )}
 
       {screen === "victory" && player && (
-        <div style={{textAlign:"center", maxWidth:"520px", width:"100%"}}>
+        <div style={{textAlign:"center", maxWidth:"520px", width:"100%", position:"relative"}}>
+
+          {/* ── CONFETTI gold — visibili solo dopo il reveal ── */}
+          {victoryRevealed && (() => {
+            const rng = (s) => { const x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+            const confetti = ["🌟","✨","💫","⭐","🏆","💰","🎊","🎉"];
+            return Array.from({length:18}, (_,i) => (
+              <div key={i} style={{
+                position:"absolute",
+                left:`${5 + rng(i*7)*88}%`,
+                top:`${rng(i*11)*30}%`,
+                fontSize:`${10 + rng(i*13)*14}px`,
+                animation:`confettiDrop ${1.2 + rng(i*17)*1.6}s ${rng(i*19)*0.8}s ease-in forwards`,
+                pointerEvents:"none", zIndex:10,
+              }}>{confetti[i % confetti.length]}</div>
+            ));
+          })()}
 
           {/* ── SCRATCH CARD TITOLO ── */}
-          <div style={{position:"relative", marginBottom: victoryRevealed ? "20px" : "4px", userSelect:"none"}}>
+          <div style={{position:"relative", marginBottom: victoryRevealed ? "16px" : "4px", userSelect:"none"}}>
             {/* Testo nascosto sotto */}
             <div style={{padding:"18px 0 10px"}}>
               <div style={{
-                color:C.gold, fontSize:"clamp(42px,8vw,72px)", fontWeight:"bold",
+                color:C.gold, fontSize:"clamp(32px,7vw,56px)", fontWeight:"bold",
                 letterSpacing:"4px", lineHeight:1, fontFamily:FONT,
-                animation: victoryRevealed ? "glow 2s infinite" : "none",
+                animation: victoryRevealed ? "victoryGoldPulse 1.8s ease-in-out infinite" : "none",
               }}>
                 SEI LUDOPATICO
               </div>
               <div style={{
-                color:C.gold, fontSize:"clamp(16px,3vw,26px)", fontWeight:"bold",
-                letterSpacing:"8px", fontFamily:FONT, marginTop:"6px",
-                opacity:0.85, animation: victoryRevealed ? "glow 2s infinite" : "none",
+                color:C.gold, fontSize:"clamp(14px,3vw,22px)", fontWeight:"bold",
+                letterSpacing:"6px", fontFamily:FONT, marginTop:"6px",
+                opacity:0.9, animation: victoryRevealed ? "victoryGoldPulse 2.2s ease-in-out infinite" : "none",
               }}>
                 COMPLIMENTI!
               </div>
@@ -2698,8 +2774,12 @@ export default function Grattini() {
                 ["🏆 Miglior premio", `€${gameStats.bestPrize||0}`, C.gold],
                 ["⚔️ Combat vinti", gameStats.combatsWon||0, C.green],
                 ["⚡ Combo", gameStats.combosFired||0, C.cyan],
-              ].map(([label, val, color]) => (
-                <div key={label} style={{background:"#0d0d18", border:"1px solid #2a2a3a", padding:"5px 8px"}}>
+              ].map(([label, val, color], i) => (
+                <div key={label} style={{
+                  background:"#0d0d18", border:`1px solid ${color}44`, padding:"5px 8px",
+                  animation:`statTileIn 0.4s ${i * 0.06}s ease-out both`,
+                  boxShadow:`inset 0 0 8px ${color}18`,
+                }}>
                   <div style={{color:C.dim, fontSize:"9px"}}>{label}</div>
                   <div style={{color, fontSize:"12px", fontWeight:"bold"}}>{val}</div>
                 </div>
