@@ -411,9 +411,12 @@ export default function Grattini() {
       overflow:"hidden",
     }}>
     {/* ── FRAME FLUIDO — riempie tutto il viewport, layout responsive ── */}
+    {/* paddingTop/Bottom con env() perché position:absolute;inset:0 ignora il padding di #root */}
     <div style={{...S.container, cursor: globalNailCursor,
       width: "100%",
       height: "100%",
+      paddingTop: "env(safe-area-inset-top, 0px)",
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
       animation: screenShake ? "screenShake 0.3s ease-in-out" : "none",
       filter: neonDim < 1 ? `saturate(${neonDim}) brightness(${0.6 + neonDim * 0.4})` : "none",
       transition: "filter 1.5s ease",
@@ -554,9 +557,13 @@ export default function Grattini() {
           display:"flex", flexDirection:"column",
           overflow:"hidden",
         }}>
-          {/* ── TOP BAR ── */}
+          {/* ── TOP BAR — paddingTop assorbe Dynamic Island (env() funziona in React inline styles) ── */}
           <div style={{
-            flexShrink:0, padding:"10px 14px",
+            flexShrink:0,
+            paddingTop: "calc(10px + env(safe-area-inset-top, 0px))",
+            paddingBottom: "10px",
+            paddingLeft: "14px",
+            paddingRight: "14px",
             background:"#030308",
             borderBottom:`2px solid ${scratchingCard.theme?.border || C.dim}`,
             display:"flex", alignItems:"center", gap:"10px",
@@ -701,7 +708,7 @@ export default function Grattini() {
 
       {/* ── DESK — area di gioco centrale, scrollabile ── */}
       <div style={{flex:1, minHeight:0,
-        overflowY: screen === "tutorialNails" ? "hidden" : "auto",
+        overflowY:"auto",
         overflowX:"hidden",
         WebkitOverflowScrolling:"touch", /* momentum scroll iOS */
         display:"flex", flexDirection:"column", alignItems:"center",
@@ -934,116 +941,81 @@ export default function Grattini() {
       {/* ═══ TUTORIAL UNGHIE — paginated, no scroll ═══ */}
       {screen === "tutorialNails" && (
         <div style={{
-          width:"100%", height:"100%", maxWidth:"560px",
+          width:"100%", height:"100%", maxWidth:"520px",
           display:"flex", flexDirection:"column",
-          padding:"10px 14px 12px", boxSizing:"border-box",
-          position:"relative", zIndex:1,
+          padding:"10px 14px 14px", boxSizing:"border-box",
+          overflowY:"auto", WebkitOverflowScrolling:"touch",
         }}>
-          {/* ── Header comune ── */}
-          <div style={{textAlign:"center", flexShrink:0, marginBottom:"8px"}}>
-            <div style={{...S.h2, color:C.cyan, marginBottom:"2px", fontSize:"15px"}}>🖐 Le tue unghie sono la tua vita</div>
-            <div style={{color:C.dim, fontSize:"10px", letterSpacing:"2px"}}>TUTORIAL — leggi bene, non si torna indietro</div>
+          {/* ── Header ── */}
+          <div style={{textAlign:"center", flexShrink:0, marginBottom:"10px"}}>
+            <div style={{color:C.cyan, fontFamily:FONT, fontSize:"16px", fontWeight:"bold", letterSpacing:"2px", marginBottom:"2px"}}>
+              🖐 LE TUE UNGHIE
+            </div>
+            <div style={{color:C.dim, fontSize:"9px", letterSpacing:"3px"}}>TUTORIAL — leggi, poi gratta</div>
           </div>
 
-          {/* ── Page dots ── */}
-          <div style={{display:"flex", justifyContent:"center", gap:"8px", marginBottom:"8px", flexShrink:0}}>
-            {[0,1].map(i => (
-              <div key={i} style={{
-                width:"8px", height:"8px", borderRadius:"50%",
-                background: tutorialPage === i ? C.cyan : "#333",
-                border: `1px solid ${tutorialPage === i ? C.cyan : "#555"}`,
-                transition:"background 0.2s",
-              }}/>
+          {/* ── Griglia stati unghie — 2 colonne, 3 righe ── */}
+          <div style={{
+            display:"grid", gridTemplateColumns:"1fr 1fr",
+            gap:"6px", marginBottom:"10px", flexShrink:0,
+          }}>
+            {[
+              { label:"Sana",         color:C.green,   badge:"💚 PIENO",   desc:"Unghia intatta. Premio al 100%." },
+              { label:"Graffiata",    color:C.gold,    badge:"💛 PIENO",   desc:"Usura iniziale. Premio ancora pieno." },
+              { label:"Sanguinante",  color:C.orange,  badge:"🩸 −50%",    desc:"Fa male. Premio dimezzato." },
+              { label:"Marcia",       color:C.red,     badge:"🦠 −75%",    desc:"Pericolosa. Solo 25% del premio." },
+              { label:"Morta ✝",      color:"#555",    badge:"💀 FUORI",   desc:"Inutilizzabile. Passa alla prossima." },
+              { label:"Kawaii ♡",     color:"#ff88cc", badge:"✨ ×2",      desc:"Rara. Premio raddoppiato. Usala bene." },
+            ].map(({label, color, badge, desc}) => (
+              <div key={label} style={{
+                background:"#0c0c1a", border:`1px solid ${color}55`,
+                padding:"7px 9px",
+                display:"flex", flexDirection:"column", gap:"3px",
+              }}>
+                <div style={{display:"flex", alignItems:"center", gap:"6px"}}>
+                  <div style={{width:"8px", height:"8px", background:color, flexShrink:0, boxShadow:`0 0 4px ${color}`}}/>
+                  <span style={{color, fontSize:"12px", fontWeight:"bold", letterSpacing:"0.5px"}}>{label}</span>
+                  <span style={{
+                    marginLeft:"auto", fontSize:"9px", fontWeight:"bold",
+                    color: color === "#555" ? "#555" : color,
+                    background:"#00000066", padding:"1px 5px",
+                    border:`1px solid ${color}33`,
+                  }}>{badge}</span>
+                </div>
+                <div style={{color:C.dim, fontSize:"10px", lineHeight:"1.35"}}>{desc}</div>
+              </div>
             ))}
           </div>
 
-          {/* ── Slide container ── */}
-          <div style={{flex:1, minHeight:0, position:"relative", overflow:"hidden"}}>
-
-            {/* SLIDE 0 — stati unghie */}
-            <div style={{
-              position:"absolute", inset:0,
-              display:"flex", flexDirection:"column",
-              opacity: tutorialPage === 0 ? 1 : 0,
-              transform: tutorialPage === 0 ? "translateX(0)" : "translateX(-100%)",
-              transition:"opacity 0.25s, transform 0.25s",
-              pointerEvents: tutorialPage === 0 ? "auto" : "none",
-            }}>
-              <div style={{
-                flex:1, display:"grid", gridTemplateColumns:"1fr 1fr",
-                gap:"7px", alignContent:"start", overflowY:"hidden",
-                marginBottom:"10px",
-              }}>
-                {[
-                  { state:"sana",        label:"Sana",         color:C.green,   desc:"Unghia intatta. Premio pieno." },
-                  { state:"graffiata",   label:"Graffiata",    color:C.gold,    desc:"Primo segno di usura. Premio pieno." },
-                  { state:"sanguinante", label:"Sanguinante",  color:C.orange,  desc:"Fa male. Premio ridotto al 50%." },
-                  { state:"marcia",      label:"Marcia",       color:C.red,     desc:"Pericolosa. Premio ridotto al 25%." },
-                  { state:"morta",       label:"Morta ✝",      color:"#555",    desc:"Inutilizzabile. Passi alla prossima." },
-                  { state:"kawaii",      label:"Kawaii ♡",     color:C.pink,    desc:"Speciale. Premio x2. Usala bene." },
-                ].map(({state, label, color, desc}) => (
-                  <div key={state} style={{
-                    background:"#111122", border:`1px solid ${color}44`,
-                    padding:"8px 10px",
-                    display:"flex", alignItems:"flex-start", gap:"7px",
-                  }}>
-                    <div style={{width:"9px", height:"9px", background:color, flexShrink:0, marginTop:"3px"}}/>
-                    <div>
-                      <div style={{color, fontSize:"12px", fontWeight:"bold"}}>{label}</div>
-                      <div style={{color:C.dim, fontSize:"10px", lineHeight:"1.4"}}>{desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Btn variant="cyan" onClick={() => setTutorialPage(1)} style={{fontSize:"13px", padding:"10px", flexShrink:0}}>
-                Avanti — come funzionano →
-              </Btn>
+          {/* ── Meccaniche in due righe compatte ── */}
+          <div style={{
+            background:"#0d1100", border:`1px solid ${C.gold}44`,
+            padding:"8px 11px", marginBottom:"8px", flexShrink:0,
+          }}>
+            <div style={{color:C.gold, fontSize:"10px", fontWeight:"bold", letterSpacing:"1px", marginBottom:"5px"}}>⚠ COME SI CONSUMANO</div>
+            <div style={{color:C.text, fontSize:"11px", lineHeight:"1.7"}}>
+              Ogni <strong style={{color:C.bright}}>3 celle grattate</strong> → l'unghia degrada di uno stato.<br/>
+              Hai <strong style={{color:C.bright}}>5 unghie</strong>. Quando una muore, passi alla prossima.<br/>
+              Tutte e 5 morte → <strong style={{color:C.red}}>GAME OVER</strong>.
             </div>
+          </div>
 
-            {/* SLIDE 1 — meccaniche */}
-            <div style={{
-              position:"absolute", inset:0,
-              display:"flex", flexDirection:"column",
-              opacity: tutorialPage === 1 ? 1 : 0,
-              transform: tutorialPage === 1 ? "translateX(0)" : "translateX(100%)",
-              transition:"opacity 0.25s, transform 0.25s",
-              pointerEvents: tutorialPage === 1 ? "auto" : "none",
-              gap:"8px",
-            }}>
-              <div style={{
-                background:"#0d1200", border:`1px solid ${C.gold}55`,
-                padding:"10px 13px", textAlign:"left", flexShrink:0,
-              }}>
-                <div style={{color:C.gold, fontSize:"11px", fontWeight:"bold", marginBottom:"5px"}}>⚠ COME SI CONSUMANO</div>
-                <div style={{color:C.text, fontSize:"11px", lineHeight:"1.65"}}>
-                  Ogni <strong style={{color:C.bright}}>3 celle grattate</strong> l'unghia degrada di un livello.<br/>
-                  Hai <strong style={{color:C.bright}}>5 unghie</strong> — quando una muore passi alla prossima.<br/>
-                  Quando muoiono <strong style={{color:C.red}}>tutte e 5</strong> → <strong style={{color:C.red}}>GAME OVER</strong>.<br/>
-                  In combattimento grattare consuma l'unghia esattamente come i biglietti normali.
-                </div>
-              </div>
-              <div style={{
-                background:"#0a0808", border:`1px solid ${C.cyan}44`,
-                padding:"10px 13px", textAlign:"left", flexShrink:0,
-              }}>
-                <div style={{color:C.cyan, fontSize:"11px", fontWeight:"bold", marginBottom:"4px"}}>💡 CONSIGLIO DEL VECCHIO</div>
-                <div style={{color:C.dim, fontSize:"11px", lineHeight:"1.6"}}>
-                  Compra cerotti e disinfettanti al tabaccaio. Non aspettare che sia troppo tardi.<br/>
-                  L'unghia Kawaii vale doppio — tienila per le carte grosse.
-                </div>
-              </div>
-              <div style={{flex:1}}/>
-              <div style={{display:"flex", gap:"8px", flexShrink:0}}>
-                <Btn onClick={() => setTutorialPage(0)} style={{fontSize:"12px", padding:"10px 14px", opacity:0.7}}>
-                  ← Indietro
-                </Btn>
-                <Btn variant="gold" onClick={() => setScreen("introScratch")} style={{fontSize:"13px", padding:"10px", flex:1}}>
-                  Ho capito — iniziamo! →
-                </Btn>
-              </div>
+          <div style={{
+            background:"#080a08", border:`1px solid ${C.cyan}33`,
+            padding:"7px 11px", marginBottom:"12px", flexShrink:0,
+          }}>
+            <div style={{color:C.cyan, fontSize:"10px", fontWeight:"bold", letterSpacing:"1px", marginBottom:"4px"}}>💡 CONSIGLIO</div>
+            <div style={{color:C.dim, fontSize:"10px", lineHeight:"1.5"}}>
+              Compra cerotti e disinfettanti al tabaccaio prima che sia tardi.<br/>
+              Tieni la Kawaii per le carte da alto valore.
             </div>
+          </div>
 
-          </div>{/* /slide container */}
+          {/* ── CTA ── */}
+          <Btn variant="gold" onClick={() => setScreen("introScratch")}
+            style={{fontSize:"14px", padding:"14px", letterSpacing:"2px", flexShrink:0}}>
+            ░ HO CAPITO — INIZIAMO ░
+          </Btn>
         </div>
       )}
 
