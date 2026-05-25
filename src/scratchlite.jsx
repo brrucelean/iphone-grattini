@@ -89,7 +89,6 @@ export default function Grattini() {
   const [nailSanguinanteModal, setNailSanguinanteModal] = useState(false);
   const [cellaProgress, setCellaProgress] = useState(0); // graffi al muro in cella (0-8 = evaso)
   const [tutorialPage, setTutorialPage] = useState(0); // 0 = unghie, 1 = meccaniche
-  const [screenFade, setScreenFade] = useState(false); // flash nero tra schermate
   // ─── HOOK: useMeta ───
   const {
     achievements, setAchievements,
@@ -125,19 +124,8 @@ export default function Grattini() {
     else if (screen === "map") triggerNpcComment("map");
   }, [screen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Screen flash + haptics al cambio schermata ──────────────
-  const prevScreen = useRef(screen);
+  // ── Haptics al cambio schermata ──────────────────────────────
   useEffect(() => {
-    if (prevScreen.current === screen) return;
-    const prev = prevScreen.current;
-    prevScreen.current = screen;
-    // Flash nero breve tra schermate (non per piccoli overlay)
-    const skipFlash = new Set(["cedole"]);
-    if (!skipFlash.has(screen) && !skipFlash.has(prev)) {
-      setScreenFade(true);
-      setTimeout(() => setScreenFade(false), 380);
-    }
-    // Haptics sulle transizioni più significative
     if (screen === "gameOver")  Haptics.gameOver();
     if (screen === "victory")   Haptics.victory();
     if (screen === "combat")    Haptics.tap();
@@ -512,15 +500,6 @@ export default function Grattini() {
         @keyframes confettiDrop { 0% { transform:translateY(-20px) rotate(0deg); opacity:1; } 100% { transform:translateY(120px) rotate(720deg); opacity:0; } }
         @keyframes statTileIn { 0% { transform:scale(0.7) translateY(10px); opacity:0; } 100% { transform:scale(1) translateY(0); opacity:1; } }
       `}</style>
-
-      {/* ═══ SCREEN TRANSITION FLASH ═══ */}
-      {screenFade && (
-        <div style={{
-          position:"fixed", inset:0, zIndex:99997, pointerEvents:"none",
-          background:"#000",
-          animation:"screenFlash 0.38s ease-out forwards",
-        }}/>
-      )}
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
       {globalPainFlash > 0 && (
