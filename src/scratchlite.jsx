@@ -608,17 +608,6 @@ export default function Grattini() {
             5 unghie · 3 biomi · 1 destino<br/>
             Gratta con saggezza. Le unghie non ricrescono.
           </div>
-          {typeof window !== "undefined" && window.innerWidth < 720 && (
-            <div style={{
-              marginTop:"18px", padding:"10px 14px", maxWidth:"320px",
-              border:`1px solid ${C.orange}88`, background:"#1a0a00",
-              color:C.orange, fontSize:"11px", lineHeight:"1.5", textAlign:"center",
-              letterSpacing:"0.5px",
-            }}>
-              ⚠ Ottimizzato per desktop.<br/>
-              Su mobile alcuni grattini sono difficili da grattare.
-            </div>
-          )}
           {activeCedola && (() => {
             const cd = CEDOLE.find(c => c.id === activeCedola);
             return cd ? (
