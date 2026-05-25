@@ -14,6 +14,7 @@ import { useScratchHandlers } from "./hooks/useScratchHandlers.js";
 import { useNodeHandlers } from "./hooks/useNodeHandlers.js";
 import { useEventHandlers } from "./hooks/useEventHandlers.js";
 import { useSpacebarShortcut } from "./hooks/useSpacebarShortcut.js";
+import { useIsMobile } from "./hooks/useIsMobile.js";
 import { NODE_ICONS } from "./data/map.js";
 import { ITEM_DEFS, RELIC_DEFS, GRATTATORE_DEFS } from "./data/items.js";
 import { BIOMES, CEDOLE, BIOME_PALETTE } from "./data/biomes.js";
@@ -387,6 +388,9 @@ export default function Grattini() {
 
   const bioPal = BIOME_PALETTE[currentBiome] || BIOME_PALETTE[0];
 
+  // iPhone/mobile: layout verticale a colonna singola invece di 3 colonne
+  const { isMobile } = useIsMobile();
+
   return (
     <div style={{
       position:"fixed", top:0, left:0,
@@ -504,12 +508,18 @@ export default function Grattini() {
         </div>
       )}
 
-      {/* ── 3-COLUMN MAIN AREA ── */}
-      <div style={{flex:1, width:"100%", display:"flex", overflow:"hidden", minHeight:0}}>
+      {/* ── MAIN AREA — riga (desktop) / colonna (mobile) ── */}
+      <div style={{flex:1, width:"100%", display:"flex", flexDirection: isMobile ? "column" : "row", overflow:"hidden", minHeight:0}}>
 
-      {/* ── SIDEBAR SINISTRA: unghie ── */}
+      {/* ── UNGHIE — colonna sinistra (desktop) / striscia orizzontale in cima (mobile) ── */}
       {player && !["title","tutorialNails"].includes(screen) && (
-        <div style={{
+        <div style={isMobile ? {
+          width:"100%", flexShrink:0,
+          borderBottom:"1px solid #12121e",
+          background:"#05050d",
+          overflowX:"auto", overflowY:"hidden",
+          padding:"6px 8px",
+        } : {
           width:"160px", flexShrink:0,
           borderRight:"1px solid #12121e",
           background:"#05050d",
@@ -517,7 +527,7 @@ export default function Grattini() {
           overflowY:"auto", overflowX:"hidden",
           padding:"8px 6px",
         }}>
-          <NailSidebar nails={player.nails} activeNail={player.activeNail} onSelectNail={handleSelectNail} locked={!!scratchingCard} grattatori={player.grattatori||[]} equippedGrattatore={player.equippedGrattatore} onEquipGrattatore={equipGrattatore} />
+          <NailSidebar nails={player.nails} activeNail={player.activeNail} onSelectNail={handleSelectNail} locked={!!scratchingCard} grattatori={player.grattatori||[]} equippedGrattatore={player.equippedGrattatore} onEquipGrattatore={equipGrattatore} horizontal={isMobile} />
         </div>
       )}
 

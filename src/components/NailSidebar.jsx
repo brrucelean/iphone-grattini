@@ -13,20 +13,24 @@ const CHIRURGO_SLOTS = {
   oro:      { max: 5, color: "#ffd700", label: "ORO" },
 };
 
-export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, grattatori=[], equippedGrattatore=null, onEquipGrattatore=null }) {
+export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, grattatori=[], equippedGrattatore=null, onEquipGrattatore=null, horizontal=false }) {
   // Alive tiers in order worst→best (excluding morta)
   const TIER_ORDER = ["marcia","sanguinante","graffiata","sana","kawaii"];
   const TIER_COLORS = { marcia:C.red, sanguinante:C.orange, graffiata:C.gold, sana:C.green, kawaii:C.pink };
   // Sprint 2: stati speciali fuori catena — mappa pip all'equivalente più vicino
   const SPECIAL_TIER_MAP = { polliceVerde: "kawaii", unghiaNera: "marcia" };
   return (
-    <div style={{display:"flex", flexDirection:"column", gap:"5px", alignItems:"stretch"}}>
-      {/* Heading Vintage */}
-      <div style={{textAlign:"center", marginBottom:"4px"}}>
-        <VintageBadge color={locked ? C.orange : C.gold} size="md">
-          {locked ? "🔒 BLOCCATA" : "🖐 UNGHIE"}
-        </VintageBadge>
-      </div>
+    <div style={horizontal
+      ? {display:"flex", flexDirection:"row", gap:"6px", alignItems:"stretch", overflowX:"auto", overflowY:"hidden", width:"100%", paddingBottom:"2px"}
+      : {display:"flex", flexDirection:"column", gap:"5px", alignItems:"stretch"}}>
+      {/* Heading Vintage — solo in verticale (su mobile risparmiamo spazio) */}
+      {!horizontal && (
+        <div style={{textAlign:"center", marginBottom:"4px"}}>
+          <VintageBadge color={locked ? C.orange : C.gold} size="md">
+            {locked ? "🔒 BLOCCATA" : "🖐 UNGHIE"}
+          </VintageBadge>
+        </div>
+      )}
       {nails.map((n, i) => {
         const info = NAIL_INFO[n.state];
         const visual = getNailVisual(n);
@@ -70,6 +74,7 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               opacity: isDead ? 0.35 : 1,
               display:"flex", alignItems:"center", gap:"6px",
               transition:"box-shadow 0.2s, border-color 0.2s",
+              ...(horizontal ? { minWidth:"122px", flexShrink:0 } : {}),
             }}>
             {locked && !isActive && !isDead && (
               <div style={{
@@ -220,15 +225,18 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
         const uses = g.usesLeft || 0;
         return (
           <>
-            <div style={{textAlign:"center", marginTop:"6px", marginBottom:"3px", borderTop:`1px solid #1a1a2e`, paddingTop:"6px"}}>
-              <VintageBadge color={C.cyan} size="md">🔧 GRATTATORE</VintageBadge>
-            </div>
+            {!horizontal && (
+              <div style={{textAlign:"center", marginTop:"6px", marginBottom:"3px", borderTop:`1px solid #1a1a2e`, paddingTop:"6px"}}>
+                <VintageBadge color={C.cyan} size="md">🔧 GRATTATORE</VintageBadge>
+              </div>
+            )}
             <Tooltip text={`${g.emoji} ${g.name}\n${g.desc}\n${uses > 10 ? uses : uses + "/" + (g.maxUses||uses)} usi rimasti`} color={C.cyan}>
             <div style={{
               border:`1px solid ${C.cyan}`,
               background: C.cyan+"18",
               padding:"5px 8px", cursor:"default",
               display:"flex", alignItems:"center", gap:"6px",
+              ...(horizontal ? { minWidth:"122px", flexShrink:0 } : {}),
             }}>
               <span style={{fontSize:"15px", lineHeight:1, flexShrink:0}}>{g.emoji}</span>
               <span style={{flex:1, minWidth:0}}>
