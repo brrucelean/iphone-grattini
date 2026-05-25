@@ -500,6 +500,8 @@ export default function Grattini() {
         @keyframes victoryGoldPulse { 0%,100% { text-shadow: 0 0 12px #ffd700bb, 0 0 40px #ffd70066; } 50% { text-shadow: 0 0 30px #ffd700ff, 0 0 80px #ffd700aa, 0 0 120px #ffcc0055; } }
         @keyframes confettiDrop { 0% { transform:translateY(-20px) rotate(0deg); opacity:1; } 100% { transform:translateY(120px) rotate(720deg); opacity:0; } }
         @keyframes statTileIn { 0% { transform:scale(0.7) translateY(10px); opacity:0; } 100% { transform:scale(1) translateY(0); opacity:1; } }
+        @keyframes scratchCardSlideIn { 0% { opacity:0; transform:translateY(18px) scale(0.97); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes scratchTopBarIn { 0% { opacity:0; transform:translateY(-10px); } 100% { opacity:1; transform:translateY(0); } }
       `}</style>
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
@@ -539,6 +541,131 @@ export default function Grattini() {
             padding:"10px 28px", cursor:"pointer", borderRadius:"0", fontSize:"14px",
             marginTop:"8px", letterSpacing:"1px",
           }}>Avanti →</button>
+        </div>
+      )}
+
+      {/* ═══ FULL-SCREEN SCRATCH OVERLAY ═══
+           Appare ogni volta che l'utente apre un grattino — copre tutta la schermata
+           con z-index:500 così sia il DESK che l'intro risultano invisibili sotto. */}
+      {scratchingCard && player && (
+        <div style={{
+          position:"absolute", inset:0, zIndex:500,
+          background: bioPal.bg,
+          display:"flex", flexDirection:"column",
+          overflow:"hidden",
+        }}>
+          {/* ── TOP BAR ── */}
+          <div style={{
+            flexShrink:0, padding:"10px 14px",
+            background:"#030308",
+            borderBottom:`2px solid ${scratchingCard.theme?.border || C.dim}`,
+            display:"flex", alignItems:"center", gap:"10px",
+            animation:"scratchTopBarIn 0.22s ease-out both",
+            boxShadow:`0 2px 18px #00000088`,
+          }}>
+            {/* Card info */}
+            <div style={{flex:1, minWidth:0}}>
+              <div style={{color:C.dim, fontSize:"8px", letterSpacing:"3px", fontFamily:FONT, marginBottom:"2px"}}>
+                ░ GRATTA E VINCI ░
+              </div>
+              <div style={{
+                color: scratchingCard.theme?.border || C.gold,
+                fontFamily:FONT, fontSize:"14px", fontWeight:"bold",
+                letterSpacing:"1px",
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                textShadow:`0 0 10px ${scratchingCard.theme?.border || C.gold}88`,
+              }}>
+                {scratchingCard.emoji || "🎫"} {scratchingCard.name}
+              </div>
+            </div>
+            {/* Nail health dots */}
+            <div style={{display:"flex", gap:"5px", flexShrink:0, alignItems:"center"}}>
+              {player.nails.map((n, i) => {
+                const dotColor =
+                  n.state === "morta"        ? "#222"    :
+                  n.state === "marcia"       ? "#880000" :
+                  n.state === "sanguinante"  ? "#cc4400" :
+                  n.state === "graffiata"    ? "#885500" :
+                  n.state === "piede"        ? "#006688" :
+                  C.green;
+                return (
+                  <div key={i} style={{
+                    width:"10px", height:"14px",
+                    background: dotColor,
+                    border: i === player.activeNail
+                      ? `1px solid ${C.bright}`
+                      : `1px solid #333`,
+                    boxShadow: i === player.activeNail
+                      ? `0 0 6px ${dotColor}`
+                      : "none",
+                    flexShrink:0,
+                  }} />
+                );
+              })}
+            </div>
+            {/* Money */}
+            <div style={{
+              color:C.gold, fontFamily:FONT, fontSize:"15px", fontWeight:"bold",
+              textShadow:`0 0 8px ${C.gold}88`, flexShrink:0,
+              background:"#0a0800", border:`1px solid ${C.gold}44`,
+              padding:"2px 8px",
+            }}>
+              €{player.money}
+            </div>
+          </div>
+
+          {/* ── SCROLL AREA con la schedina ── */}
+          <div style={{
+            flex:1, overflowY:"auto", overflowX:"hidden",
+            WebkitOverflowScrolling:"touch",
+            display:"flex", justifyContent:"center",
+            padding:"10px 4px 32px",
+            backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)",
+            backgroundAttachment:"local",
+          }}>
+            {/* animation wrapper */}
+            <div style={{animation:"scratchCardSlideIn 0.28s ease-out both", width:"100%", display:"flex", justifyContent:"center"}}>
+              <ScratchCardView
+                card={scratchingCard}
+                nailState={getActiveNailState()}
+                nailImplant={player.nails[player.activeNail]?.implant || null}
+                fortune={effectiveFortune}
+                grattaMania={player.grattaMania}
+                equippedGrattatore={player.equippedGrattatore}
+                relicEffects={playerRelicEffects}
+                ambidestri={player.skills?.includes("ambidestri")}
+                onCellScratch={handleCellScratch}
+                onNailDamage={handleNailDamage}
+                onItemFound={handleCardItemFound}
+                onDone={(r) => { setFirstScratchShown(true); handleScratchDone(r); }}
+                showFirstWarning={!firstScratchShown}
+                lastWonPrize={player.lastWonPrize || 0}
+                extraTiles={player.extraTiles || []}
+                onExtraTileUsed={(tileId, tileIdx) => {
+                  if (tileId === "monetaCinese") {
+                    updatePlayer(p => {
+                      const tiles = [...(p.extraTiles||[])];
+                      tiles.splice(tileIdx, 1);
+                      return {...p, extraTiles: tiles, monetaCineseActive: true};
+                    });
+                    addLog("🀄 MONETA CINESE ATTIVATA! La prossima grattata sarà x5 GARANTITA!", C.gold);
+                  }
+                }}
+                onCardActivate={(event) => {
+                  if (event === "maledetto_curse") {
+                    updatePlayer(p => ({
+                      ...p,
+                      nails: p.nails.map(n =>
+                        n.state !== "morta" && n.state !== "marcia" && n.state !== "sanguinante"
+                          ? {...n, state: "sanguinante"} : n
+                      ),
+                    }));
+                    addLog("💀 LA MALEDIZIONE SI APRE! Tutte le unghie sanguinano!", C.red);
+                  }
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -1129,50 +1256,7 @@ export default function Grattini() {
         </div>
       )}
 
-      {/* ═══ SCRATCH CARD ═══ */}
-      {screen === "scratch" && player && scratchingCard && (
-        <div style={{maxWidth:"900px", width:"100%"}}>
-          <ScratchCardView
-            card={scratchingCard}
-            nailState={getActiveNailState()}
-            nailImplant={player.nails[player.activeNail]?.implant || null}
-            fortune={player.fortune}
-            grattaMania={player.grattaMania}
-            equippedGrattatore={player.equippedGrattatore}
-            ambidestri={player.skills?.includes("ambidestri")}
-            onCellScratch={handleCellScratch}
-            onNailDamage={handleNailDamage}
-            onItemFound={handleCardItemFound}
-            onDone={(r) => { setFirstScratchShown(true); handleScratchDone(r); }}
-            showFirstWarning={!firstScratchShown}
-            lastWonPrize={player.lastWonPrize || 0}
-            extraTiles={player.extraTiles || []}
-            onExtraTileUsed={(tileId, tileIdx) => {
-              if (tileId === "monetaCinese") {
-                updatePlayer(p => {
-                  const tiles = [...(p.extraTiles||[])];
-                  tiles.splice(tileIdx, 1);
-                  return {...p, extraTiles: tiles, monetaCineseActive: true};
-                });
-                addLog("🀄 MONETA CINESE ATTIVATA! La prossima grattata sarà x5 GARANTITA!", C.gold);
-              }
-            }}
-            onCardActivate={(event) => {
-              if (event === "maledetto_curse") {
-                updatePlayer(p => ({
-                  ...p,
-                  nails: p.nails.map(n =>
-                    n.state !== "morta" && n.state !== "marcia" && n.state !== "sanguinante"
-                      ? {...n, state: "sanguinante"}
-                      : n
-                  ),
-                }));
-                addLog("💀 LA MALEDIZIONE SI APRE! Tutte le unghie sanguinano!", C.red);
-              }
-            }}
-          />
-        </div>
-      )}
+      {/* ═══ SCRATCH CARD — ora gestita dal full-screen overlay in cima (zIndex:500) ═══ */}
 
       {/* ═══ DOPPIO O NULLA ═══ */}
       {screen === "doppioONulla" && player && doppioONulla && (
