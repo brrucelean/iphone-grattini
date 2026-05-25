@@ -62,16 +62,30 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    // Silver gradient
+    // Silver gradient — più brillante, stile CGA coin
     const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
-    grad.addColorStop(0, "#909090"); grad.addColorStop(0.5,"#c0c0c0"); grad.addColorStop(1,"#808080");
+    grad.addColorStop(0,   "#aaaaaa");
+    grad.addColorStop(0.3, "#d4d4d4");
+    grad.addColorStop(0.5, "#e8e8e8");
+    grad.addColorStop(0.7, "#c0c0c0");
+    grad.addColorStop(1,   "#888888");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Shimmer dots
-    ctx.fillStyle = "rgba(255,255,255,0.3)";
-    for (let i=0; i<40; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1.5, 1.5);
-    ctx.fillStyle = "rgba(0,0,0,0.15)";
-    for (let i=0; i<20; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+    // Shimmer highlights
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    for (let i=0; i<55; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1.5, 1.5);
+    // Dark grit
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    for (let i=0; i<25; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+    // Diagonal texture lines
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 0.5;
+    for (let i=0; i<8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i*(canvas.width/7), 0);
+      ctx.lineTo(0, i*(canvas.height/7));
+      ctx.stroke();
+    }
   }, []);
 
   const doScratch = (e) => {
@@ -124,21 +138,21 @@ export function ScratchCell({ cell, idx, onScratch, finished, isWinSymbol, isPar
   const color = isTrap ? C.red : isJolly ? C.gold : isItem ? C.cyan : isStop ? C.red :
     isCard ? (cell.isRed ? "#FF0000" : "#000000") :
     isWinSymbol ? C.green : isPartialMatch ? C.gold : C.text;
-  // CGA: cella non grattata = nero con bordo dim (aspetto "moneta da grattare")
-  const unrevealedBorder = themeColor || C.dim;
+  // CGA: cella non grattata = nero con bordo più visibile (aspetto "moneta CGA")
+  const unrevealedBorder = themeColor || "#778899";
   const symFontSize = isCard ? "20px" : (cell.value !== undefined || isStop) ? "16px" : "24px";
 
   return (
     <div style={{
       width:"100%", aspectRatio:"1.3", position:"relative",
-      border:`2px solid ${cell.scratched && isBloody ? "#ff2030" : (cell.scratched ? borderColor : unrevealedBorder)}`,
+      border:`3px solid ${cell.scratched && isBloody ? "#ff2030" : (cell.scratched ? borderColor : unrevealedBorder)}`,
       borderRadius:"0", overflow:"hidden",
       background: cell.scratched ? bg : "#111",
       boxShadow: winAnim
-        ? `0 0 0 3px ${C.green}cc, 0 0 24px ${C.green}88, 0 0 48px ${C.green}44`
+        ? `0 0 0 3px ${C.green}ee, 0 0 24px ${C.green}aa, 0 0 48px ${C.green}55, 3px 3px 0 #000`
         : cell.scratched && isBloody
-          ? "inset 0 0 14px #ff000088, 0 0 10px #ff000055"
-          : "none",
+          ? "inset 0 0 14px #ff000088, 0 0 10px #ff000055, 3px 3px 0 #000"
+          : "3px 3px 0 #000000",
       animation: winAnim ? "winFlash 0.9s ease-out forwards" : "none",
       transition: "box-shadow 0.15s",
     }}>

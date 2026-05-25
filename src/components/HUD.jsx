@@ -17,7 +17,7 @@ function StatusChip({ color, children, danger = false, active = false, onClick, 
     <span onClick={onClick} style={{
       display:"inline-flex", alignItems:"center", gap:"3px",
       background: `linear-gradient(180deg, ${color}1c, ${color}06)`,
-      border: `1px solid ${color}${danger ? "cc" : "77"}`,
+      border: `2px solid ${color}${danger ? "dd" : "88"}`,
       color, fontSize:"11px", fontWeight: active ? "bold" : "normal",
       padding:"2px 7px", letterSpacing:"0.5px",
       boxShadow: active
@@ -59,11 +59,11 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
   );
   return (
     <div style={{...S.panel, display:"flex", justifyContent:"space-between", alignItems:"center",
-      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background:"#0d0d18", borderColor:C.dim,
+      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background:"#0a0a18", borderColor:C.dim, borderWidth:"2px",
       maxWidth:"calc(100% - 16px)", width:"calc(100% - 16px)", margin:"4px 8px",
       boxSizing:"border-box", overflow:"hidden", minWidth:0,
       position:"relative",
-      boxShadow:`0 0 10px ${C.gold}12, inset 0 0 16px #00000088`,
+      boxShadow:`4px 4px 0 #000000, 0 0 14px ${C.gold}22, inset 0 0 16px #00000099`,
     }}>
       {/* ── Corner brackets Vintage (discreti) ── */}
       {["tl","tr","bl","br"].map(pos => {
@@ -89,7 +89,7 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
           <span key={moneyBling} style={{
             display:"inline-flex", alignItems:"center", gap:"4px",
             background:`linear-gradient(180deg, ${C.gold}22, ${C.gold}08)`,
-            border:`1px solid ${C.gold}aa`,
+            border:`2px solid ${C.gold}cc`,
             color:C.gold, fontWeight:"bold",
             padding:"2px 8px",
             letterSpacing:"1px",
@@ -103,9 +103,9 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
           <span style={{
             display:"inline-flex", alignItems:"center", gap:"3px",
             color:C.cyan, cursor:"default",
-            border:`1px solid ${C.cyan}66`,
+            border:`2px solid ${C.cyan}88`,
             padding:"2px 7px",
-            boxShadow:`inset 0 0 6px ${C.cyan}10`,
+            boxShadow:`inset 0 0 6px ${C.cyan}18`,
           }}>🎫 <b>{player.scratchCards.filter(c => c.owned).length}</b></span>
         </Tooltip>
       </div>
@@ -201,10 +201,10 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
                 const col = aliveNails <= 1 ? C.red : aliveNails <= 2 ? C.orange : C.green;
                 return (
                   <span key={i} style={{
-                    display:"inline-block", width:"6px", height:"9px",
+                    display:"inline-block", width:"8px", height:"12px",
                     background: filled ? col : "#111",
-                    border: `1px solid ${filled ? col+"cc" : "#2a2a2a"}`,
-                    boxShadow: filled ? `0 0 3px ${col}88` : "none",
+                    border: `2px solid ${filled ? col+"ee" : "#333344"}`,
+                    boxShadow: filled ? `0 0 6px ${col}99, 0 0 12px ${col}44` : "none",
                   }}/>
                 );
               })}

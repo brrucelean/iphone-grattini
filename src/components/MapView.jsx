@@ -121,7 +121,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
       borderRadius:"0",
       background:"#05050f",
       position:"relative",
-      boxShadow:`0 0 24px ${biomeColor}33, inset 0 0 40px ${biomeColor}11`,
+      boxShadow:`4px 4px 0 #000000, 0 0 28px ${biomeColor}44, inset 0 0 40px ${biomeColor}14`,
     }}>
       {cornerBrackets(biomeColor, 14, -1, 2, true)}
       {/* ── HEADER — pattern Vintage con stemma bioma + chips legenda + progress ── */}
@@ -361,12 +361,12 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             if (!isActive && !isPast) return (
               <line key={`${fromId}-${toId}`}
                 x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                stroke="#ffffff" strokeWidth="1" strokeOpacity="0.12"
+                stroke="#aaaacc" strokeWidth="1.5" strokeOpacity="0.22"
                 strokeDasharray="3 7" strokeLinecap="round"
               />
             );
 
-            const sw   = isPast ? 2.5 : 2;
+            const sw   = isPast ? 3.5 : 2.5;
             const dash = isPast ? "none" : isShortcut ? "4 6" : "6 5";
             const col  = edgeColor(toId, isActive, isPast, isShortcut);
 
@@ -410,7 +410,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           const safeNode   = SAFE_TYPES.has(node.type);
 
           // Colori nodo (vedi LEGEND_CHIPS — devono restare allineati)
-          const borderWidth = isBoss || isElite || (isActive && secretUnlocked) ? 2 : isActive ? 1.5 : 1;
+          const borderWidth = isBoss ? 3 : isElite || (isActive && secretUnlocked) ? 2.5 : isActive ? 2 : 1;
           const borderCol = visited     ? "#1a1a28"
             : isBoss      ? "#ff2244"
             : isElite     ? C.orange
@@ -429,7 +429,19 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             : isActive             ? "#0a0a14"
             : "#0a0a0a";
 
-          const shadow = "none";
+          const shadow = isActive
+            ? isBoss
+              ? `0 0 22px ${C.red}dd, 0 0 44px ${C.red}55, 3px 3px 0 #000`
+              : isElite
+                ? `0 0 16px ${C.orange}cc, 3px 3px 0 #000`
+                : secretUnlocked
+                  ? `0 0 16px #cc99ffcc, 3px 3px 0 #000`
+                  : dangerNode
+                    ? `0 0 14px #ff4444cc, 3px 3px 0 #000`
+                    : safeNode
+                      ? `0 0 14px #44dd88cc, 3px 3px 0 #000`
+                      : `0 0 14px ${C.gold}cc, 3px 3px 0 #000`
+            : "none";
 
           const animation = isBoss && isActive ? "bossGlow 1.8s infinite"
             : isActive ? "slotGlow 2s infinite"
@@ -460,7 +472,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                   background: bgCol,
                   borderRadius:"0",
                   cursor: isActive && !effectivelyHidden ? "pointer" : "default",
-                  opacity: visited ? 0.28 : effectivelyHidden ? 0.5 : 1,
+                  opacity: visited ? 0.32 : effectivelyHidden ? 0.5 : 1,
                   zIndex: isBoss ? 3 : isActive ? 2 : 1,
                   boxShadow: shadow,
                   transition:"transform 0.12s, box-shadow 0.2s",
