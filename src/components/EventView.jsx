@@ -558,9 +558,9 @@ export function EventView({ node, player, onChoice }) {
         <div style={{
           flex:1, minWidth:0,
           color:accent, fontFamily:FONT, fontWeight:"bold",
-          fontSize:"15px", letterSpacing:"2px",
+          fontSize:"13px", letterSpacing:"1px", lineHeight:"1.3",
           textShadow:`0 0 10px ${accent}88`,
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+          wordBreak:"break-word",
         }}>
           {ev.title}
         </div>
