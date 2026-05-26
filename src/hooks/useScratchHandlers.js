@@ -4,7 +4,7 @@ import { CARD_BALANCE } from "../data/cards.js";
 import { BIOME_MODIFIERS } from "../data/biomes.js";
 import { roundMoney } from "../utils/money.js";
 import { degradeNailObj } from "../utils/nail.js";
-import { rng } from "../utils/random.js";
+import { rng, roll } from "../utils/random.js";
 import { AudioEngine } from "../audio.js";
 import { generateMap } from "../utils/map.js";
 import { STORAGE_KEYS, getStoredNumber, setStoredNumber } from "../utils/storage.js";

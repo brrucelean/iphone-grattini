@@ -37,7 +37,7 @@ export function useShopHandlers({ player, updatePlayer, addLog, setGameStats, se
     const item = ITEM_DEFS[itemId];
     if (!item) return;
     const discount = (player.shopDiscountMeta || 0) + biomeShopDiscount;
-    const finalCost = Math.max(1, Math.round(item.cost * (1 - discount)));
+    const finalCost = Math.max(0, Math.round(item.cost * (1 - discount)));
     if (player.money < finalCost) return;
     if (player.items.length >= MAX_ITEMS) { addLog("Zaino pieno! Usa o butta un oggetto.", C.red); return; }
     updatePlayer(p => ({...p, money: roundMoney(p.money - finalCost), items: [...p.items, itemId]}));
@@ -54,7 +54,7 @@ export function useShopHandlers({ player, updatePlayer, addLog, setGameStats, se
     const def = GRATTATORE_DEFS[gratId];
     if (!def) return;
     const discount = (player.shopDiscountMeta || 0) + biomeShopDiscount;
-    const finalCost = Math.max(1, Math.round(def.cost * (1 - discount)));
+    const finalCost = Math.max(0, Math.round(def.cost * (1 - discount)));
     if (player.money < finalCost) return;
     const newGrat = { id: gratId, name: def.name, emoji: def.emoji, effect: def.effect, value: def.value, usesLeft: def.maxUses };
     updatePlayer(p => ({...p, money: roundMoney(p.money - finalCost), grattatori: [...p.grattatori, newGrat]}));

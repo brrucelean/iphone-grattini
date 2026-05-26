@@ -28,7 +28,7 @@ import { generateCard } from "./utils/card.js";
 import { generateMap } from "./utils/map.js";
 
 import { S } from "./utils/styles.js";
-import { getUiZoom, setUiZoom } from "./utils/uiZoom.js";
+// uiZoom reserved for future use
 import { SkeletonFinger } from "./components/SkeletonFinger.jsx";
 import { Tooltip } from "./components/Tooltip.jsx";
 import { Btn } from "./components/Btn.jsx";
@@ -1188,7 +1188,7 @@ export default function Grattini() {
                     boxShadow: ip.prize > 0 ? `0 0 14px ${C.gold}22` : "none",
                   }}
                     onClick={() => {
-                      updatePlayer(p => ({...p, money: ip.prize}));
+                      updatePlayer(p => ({...p, money: p.money + ip.prize}));
                       setGameStats(s => ({...s, moneyEarned: s.moneyEarned + ip.prize}));
                       addLog(`Intaschi €${ip.prize} dal "${ip.cardName}". Il vecchio annuisce.`, C.green);
                       setScreen("map");

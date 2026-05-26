@@ -601,6 +601,42 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
             E(`${enemy.name} 🗡 ${c.emoji} ${c.name}: ti ruba €${val}${dodgesLeft>0?" (Schiva non ferma i furti)":""}! → tue €${pBase+pRunning}`, C.red);
           }
         }
+        // Drago d'Oro: "damage" = danno diretto in € (fuoco)
+        if (c.effect === "damage") {
+          if (hasGuantoBoss) {
+            E(`${enemy.name} 🔥 ${c.emoji} ${c.name}: fiamme... 🧤 GUANTO DA BOSS blocca!`, C.gold);
+          } else if (playerHasFullBlock) {
+            E(`${enemy.name} 🔥 ${c.emoji} ${c.name}: fiamme... 🛡 BLOCCATO da ${blockCard?.name||"Scudo"}!`, C.blue);
+          } else {
+            const val = Math.round((c.value || 20) * effectiveRoundMult);
+            pMoney -= val; pRunning -= val;
+            E(`${enemy.name} 🔥 ${c.emoji} ${c.name}: brucia €${val}! → tue €${pBase+pRunning}`, C.red);
+          }
+        }
+        // Drago d'Oro: "killNail" = uccide un'unghia (alias damageNail)
+        if (c.effect === "killNail") {
+          if (hasGuantoBoss) {
+            E(`${enemy.name} 🐲 ${c.emoji} ${c.name}: Artiglio... 🧤 GUANTO DA BOSS blocca!`, C.gold);
+          } else if (playerHasFullBlock) {
+            E(`${enemy.name} 🐲 ${c.emoji} ${c.name}: Artiglio... 🛡 BLOCCATO da ${blockCard?.name||"Scudo"}!`, C.blue);
+          } else if (dodgesLeft > 0) {
+            dodgesLeft--;
+            E(`${enemy.name} 🐲 ${c.emoji} ${c.name}: Artiglio... 💨 SCHIVATO!${dodgesLeft>0?` (${dodgesLeft} rimaste)`:" (Schiva esaurita)"}`, C.cyan);
+          } else {
+            playerNailKills++;
+            E(`${enemy.name} 🐲 ${c.emoji} ${c.name}: ✂️ ARTIGLIO → tua unghia MORTA!`, C.red);
+          }
+        }
+        // Drago d'Oro: "steal" = ruba soldi (alias stealMoney)
+        if (c.effect === "steal") {
+          if (playerHasFullBlock) {
+            E(`${enemy.name} 🐍 ${c.emoji} ${c.name}: Morso... 🛡 BLOCCATO da ${blockCard?.name||"Scudo"}!`, C.blue);
+          } else {
+            const val = Math.round((c.value || 15) * effectiveRoundMult);
+            pMoney -= val; pRunning -= val;
+            E(`${enemy.name} 🐍 ${c.emoji} ${c.name}: Morso Velenoso ruba €${val}! → tue €${pBase+pRunning}`, C.red);
+          }
+        }
         if (c.effect === "block" || c.effect === "fortress") {
           E(`${enemy.name} 🛡 ${c.emoji} ${c.name}: si protegge con uno scudo!`, C.blue);
         }

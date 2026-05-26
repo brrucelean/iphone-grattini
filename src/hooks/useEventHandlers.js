@@ -70,7 +70,7 @@ export function useEventHandlers({
         break;
       }
       case "payLadro": {
-        updatePlayer(p => ({...p, money: p.money - 10}));
+        updatePlayer(p => ({...p, money: Math.max(0, p.money - 10)}));
         addLog("Paghi €10 di pizzo. Il ladro sparisce.", C.red);
         setScreen("map");
         break;
@@ -801,7 +801,7 @@ export function useEventHandlers({
           for (let i = 0; i < nails.length; i++) {
             if (nails[i].state !== "morta") nails[i] = {...nails[i], state: "sana", scratchCount: 0};
           }
-          return {...p, vecchioVisits: 3, nails, fortune: p.fortune + 3, fortuneTurns: p.fortuneTurns + 99};
+          return {...p, vecchioVisits: 3, nails, fortune: p.fortune + 3, fortuneTurns: p.fortuneTurns + 5};
         });
         addLog("🌟 Una luce dorata avvolge le tue mani. Tutte le unghie risplendono. +3 Fortuna permanente!", C.gold);
         unlockAchievement("vecchio_luce");

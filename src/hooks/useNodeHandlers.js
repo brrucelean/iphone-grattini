@@ -452,7 +452,7 @@ export function useNodeHandlers({
       });
       const eliteTag = currentNode?.elite ? " ★ELITE x2!" : "";
       addLog(`🏆 Vittoria! Guadagni €${Math.max(0, result.playerMoney) * (currentNode?.elite ? 2 : 1)}!${eliteTag}`, C.green);
-      addLog(`✨ Hai preso un'unghia al nemico! Una tua unghia risorge.`, C.green);
+      if (result.winNail) addLog(`✨ Hai preso un'unghia al nemico! Una tua unghia risorge.`, C.green);
       if (result.nailHeals > 0) addLog(`Cure in combattimento: ${result.nailHeals} unghie curate!`, C.green);
       // Sprint 5: Mini-boss 3-combo challenge feedback
       if (result.minibossBonus > 0) {
