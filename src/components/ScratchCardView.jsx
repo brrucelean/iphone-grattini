@@ -1093,7 +1093,8 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
 
       {/* Gratta tutto */}
       {!finished && !winFound && scratched < totalCells
-        && card.mechanic !== "sum13" && card.mechanic !== "collect" && card.mechanic !== "setteemezzo" && (
+        && card.mechanic !== "sum13" && card.mechanic !== "collect" && card.mechanic !== "setteemezzo"
+        && card.mechanic !== "ruota" && card.mechanic !== "doppioOnulla" && (
         <div style={{marginBottom:"6px"}}>
           <Btn onClick={scratchAll} style={{fontSize:"11px", background:"#1a1a00", color:C.gold, borderColor:C.dim}}>
             ⚡ Gratta Tutto in Una Volta

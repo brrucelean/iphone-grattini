@@ -3261,7 +3261,7 @@ export default function Grattini() {
       {/* ═══ MODAL RELIQUIE ═══ */}
       {showReliquie && (
         <div style={{
-          position:"fixed", inset:0, background:"rgba(0,0,0,0.94)", zIndex:9000,
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.94)", zIndex:99000,
           display:"flex", alignItems:"center", justifyContent:"center",
           fontFamily:FONT, padding:"16px",
         }} onClick={() => setShowReliquie(false)}>
@@ -3429,7 +3429,7 @@ export default function Grattini() {
       {/* ═══ VINTAGE COLLEZIONABILI (Sprint 5) ═══ */}
       {showVintage && (
         <div style={{
-          position:"fixed", inset:0, background:"rgba(0,0,0,0.94)", zIndex:9000,
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.94)", zIndex:99000,
           display:"flex", alignItems:"center", justifyContent:"center",
           fontFamily:FONT, padding:"16px",
         }} onClick={() => setShowVintage(false)}>

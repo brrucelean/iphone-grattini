@@ -258,8 +258,11 @@ export function CarmeloScratchStrip({ messages, color }) {
     if (!latestPlain) return;
     setTypedText("");
     setDone(false);
-    // Resetta la posizione del testo
-    if (textRef.current) textRef.current.style.transform = "translateX(0)";
+    // Resetta posizione E transition del testo (altrimenti scroll-back animato del msg precedente continua)
+    if (textRef.current) {
+      textRef.current.style.transition = "none";
+      textRef.current.style.transform = "translateX(0)";
+    }
     let i = 0;
     const iv = setInterval(() => {
       if (i >= latestPlain.length) { clearInterval(iv); setDone(true); return; }
