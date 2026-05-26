@@ -132,13 +132,15 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
   const scrollRef = useRef(null);
   const [typedText, setTypedText] = useState("");
   const [typingDone, setTypingDone] = useState(true);
+  // Mostra SOLO l'ultimo messaggio — no accumulo di prevMsgs
   const latest = messages.length > 0 ? messages[messages.length - 1] : "";
-  const prevMsgs = messages.slice(0, -1);
   const latestPlain = msgPlainText(latest);
 
   useEffect(() => {
     if (!latest) return;
     setTypedText(""); setTypingDone(false);
+    // Nuovo messaggio → scolla in testa così si legge dall'inizio
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
     let i = 0;
     const iv = setInterval(() => {
       if (i >= latestPlain.length) { clearInterval(iv); setTypingDone(true); return; }
@@ -148,10 +150,6 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
     }, 28);
     return () => clearInterval(iv);
   }, [latestPlain]);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, typedText]);
 
   const skip = () => { setTypedText(latestPlain); setTypingDone(true); };
 
@@ -194,22 +192,16 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
         <div ref={scrollRef} style={{
           flex:1, overflowY:"auto", minHeight:0,
           scrollbarWidth:"thin", scrollbarColor:`${color}33 transparent`,
-          display:"flex", flexDirection:"column", gap:"6px",
         }}>
-          {prevMsgs.map((msg, i) => (
-            <div key={i} style={{fontSize:"12px", fontStyle:"italic",
-              lineHeight:"1.7", whiteSpace:"pre-wrap",
-            }}>"<MsgRender msg={msg} color="#555" />"</div>
-          ))}
           {latest && (
-            <div style={{fontSize:"12px", fontStyle:"italic",
-              lineHeight:"1.7", whiteSpace:"pre-wrap",
+            <div style={{fontSize:"13px", fontStyle:"italic",
+              lineHeight:"1.8", whiteSpace:"pre-wrap", color:"#e0e0e0",
             }}>
-              "
+              <span style={{color, opacity:0.7}}>"</span>
               <MsgRender msg={latest} color="#e0e0e0"
                 charCount={typingDone ? Infinity : typedText.length} />
               {!typingDone && <span style={{color, animation:"dialogueCursor 0.5s step-start infinite"}}>▌</span>}
-              {typingDone && `"`}
+              {typingDone && <span style={{color, opacity:0.7}}>"</span>}
             </div>
           )}
         </div>
