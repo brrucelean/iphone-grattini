@@ -690,6 +690,13 @@ export default function Grattini() {
               />
             </div>
           </div>
+
+          {/* ── CARMELO STRIP — visibile durante introScratch così lui può parlare ── */}
+          {returnScreen === "introScratch" && carmeloLog.length > 0 && (
+            <div style={{flexShrink:0, background:"#030308", borderTop:`1px solid ${C.gold}33`}}>
+              <CarmeloLogMini messages={carmeloLog} color={C.gold} />
+            </div>
+          )}
         </div>
       )}
 

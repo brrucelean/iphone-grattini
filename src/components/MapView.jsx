@@ -191,21 +191,19 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
       {BIOME_MODIFIERS[currentBiome] && (
         <div style={{
           flexShrink:0,
-          display:"flex", alignItems:"center", gap:"5px",
-          justifyContent:"center",
-          padding:"3px 10px",
-          background:`${biomeColor}0c`,
+          display:"flex", alignItems:"center", gap:"6px",
+          flexWrap:"wrap",
+          padding:"5px 12px",
+          background:`${biomeColor}12`,
           borderBottom:`1px solid ${biomeColor}44`,
-          fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
+          fontSize:"11px", fontFamily:FONT, letterSpacing:"0.5px",
           color: biomeColor,
         }}>
-          <span style={{fontSize:"11px"}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
-          <strong>{BIOME_MODIFIERS[currentBiome].label}</strong>
-          <span style={{opacity:0.55}}>—</span>
-          <span style={{opacity:0.7}}>
-            {BIOME_MODIFIERS[currentBiome].desc.length > 45
-              ? BIOME_MODIFIERS[currentBiome].desc.slice(0, 45) + "…"
-              : BIOME_MODIFIERS[currentBiome].desc}
+          <span style={{fontSize:"14px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
+          <strong style={{letterSpacing:"1px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].label}</strong>
+          <span style={{color: biomeColor+"66", flexShrink:0}}>—</span>
+          <span style={{color:"#c8c8c8", fontWeight:"normal"}}>
+            {BIOME_MODIFIERS[currentBiome].desc}
           </span>
         </div>
       )}
