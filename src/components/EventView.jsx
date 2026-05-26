@@ -4,15 +4,64 @@ import { NPC_ART, SPR_BIG, SPR_COLOR, NPC_PALETTE, VECCHIO_DIALOGHI } from "../d
 import { MACELLAIO_IMPLANTS, GRATTATORE_DEFS } from "../data/items.js";
 import { S } from "../utils/styles.js";
 import { normalizePortrait } from "../utils/nail.js";
-import { Btn } from "./Btn.jsx";
 import { Tooltip } from "./Tooltip.jsx";
 
-// ─── Vintage corner brackets (come MapView/ScratchCardView) ────────────
-function cornerBrackets(color, size = 12, inset = -2, borderW = 2, shadow = null) {
-  const sh = shadow || `0 0 6px ${color}66`;
-  const base = {
-    position:"absolute", width:`${size}px`, height:`${size}px`,
-    borderColor: color, boxShadow: sh, pointerEvents:"none",
+// ─── NPC CATEGORIES ─────────────────────────────────────────────
+// Ogni tipo NPC ha categoria, icona e colore primario per UI
+const NPC_CAT = {
+  ladro:      { label:"NEMICO",     icon:"⚔️",  color:"#ff3355", danger:3 },
+  miniboss:   { label:"SFIDA",      icon:"💀",  color:"#ff4400", danger:3 },
+  poliziotto: { label:"AUTORITÀ",   icon:"🚔",  color:"#4488ff", danger:2 },
+  spacciatore:{ label:"SOTTOBANCO", icon:"🤫",  color:"#ffaa00", danger:1 },
+  bambino:    { label:"COLLEZIONISTA",icon:"🃏", color:"#ffcc00", danger:0 },
+  mendicante: { label:"MERCANTE",   icon:"🧿",  color:"#aa88ff", danger:0 },
+  chirurgo:   { label:"CHIRURGO",   icon:"💉",  color:"#00cccc", danger:1 },
+  macellaio:  { label:"CHIRURGO",   icon:"🔪",  color:"#ff6600", danger:2 },
+  anziana:    { label:"GUARITRICE", icon:"✨",  color:"#cc99ff", danger:0 },
+  sacerdote:  { label:"SACERDOTE",  icon:"⛪",  color:"#ffdd66", danger:0 },
+  stregone:   { label:"STREGONE",   icon:"🧙",  color:"#9966ff", danger:1 },
+  maestroTe:  { label:"MAESTRO",    icon:"🍵",  color:"#66dd88", danger:0 },
+  streamer:   { label:"STREAMER",   icon:"📱",  color:"#ff44aa", danger:0 },
+  guantaio:   { label:"ARTIGIANO",  icon:"🧤",  color:"#88ccff", danger:0 },
+  evento:     { label:"EVENTO",     icon:"✦",   color:"#cc99ff", danger:0 },
+  zaino:      { label:"OGGETTO",    icon:"🎒",  color:"#888899", danger:0 },
+};
+
+// ─── ACTION META — icona + badge + colore per ogni tipo di scelta ─
+function actionMeta(action, label) {
+  const a = action || "";
+  const l = label  || "";
+  if (a === "fight")                           return { icon:"⚔️",  badge:"COMBATTI",   col:"#ff3355" };
+  if (a.includes("flee") || a.includes("fintotondo")) return { icon:"🏃",  badge:"SCAPPA",     col:"#ff8800" };
+  if (a === "leave")                           return { icon:"🚪",  badge:"ESCI",        col:"#555566" };
+  if (a.includes("Nail") || a.includes("nail")) return { icon:"🦴",  badge:"UNGHIA",      col:"#ff8800" };
+  if (a.includes("baratto"))                   return { icon:"🤝",  badge:"BARATTO",     col:"#ffaa00" };
+  if (a.includes("dona") || a.includes("dona"))return { icon:"🙏",  badge:"DONA",        col:"#66dd88" };
+  if (a.includes("implant") || a.includes("macellaio")) return { icon:"🔧", badge:"IMPIANTO",  col:"#00cccc" };
+  if (a.includes("cappello") || a === "useCappello") return { icon:"🎩", badge:"OGGETTO",   col:"#ffcc00" };
+  if (a.includes("buy") || a.includes("Buy")
+    || a.includes("compra") || a.includes("pagaMulta")
+    || a.includes("te") || l.includes("€"))    return { icon:"💰",  badge:"ACQUISTO",    col:"#ffcc00" };
+  if (a.includes("accept") || a.includes("porgi") || a.includes("tocca")) return { icon:"🎲", badge:"RISCHIO", col:"#cc99ff" };
+  if (a.includes("swap") || a.includes("Swap")) return { icon:"🔄", badge:"SCAMBIA",     col:"#88ccff" };
+  if (a.includes("vendi") || a.includes("Vendi")) return { icon:"💸", badge:"VENDI",      col:"#66dd88" };
+  if (a.includes("silentBypass"))              return { icon:"🎸",  badge:"SPECIALE",    col:"#ff44aa" };
+  if (a.includes("snitch"))                    return { icon:"🕵️",  badge:"TRADIMENTO",  col:"#ff8800" };
+  if (a.includes("lore") || a.includes("Lore")) return { icon:"📖", badge:"GRATIS",      col:"#888899" };
+  return                                              { icon:"✓",   badge:"SCEGLI",      col:C.bright  };
+}
+
+// ─── COST EXTRACTOR — estrae €N da label per mostrarlo come badge ─
+function extractCost(label) {
+  const m = (label || "").match(/€(\d+)/);
+  return m ? `€${m[1]}` : null;
+}
+
+// ─── CORNER BRACKETS ────────────────────────────────────────────
+function cornerBrackets(color, size = 12, inset = -2, borderW = 2) {
+  const base = { position:"absolute", width:`${size}px`, height:`${size}px`,
+    borderColor: color, pointerEvents:"none",
+    boxShadow: `0 0 5px ${color}55`,
   };
   return {
     tl: {...base, top:inset, left:inset, borderTop:`${borderW}px solid ${color}`, borderLeft:`${borderW}px solid ${color}`},
@@ -22,14 +71,31 @@ function cornerBrackets(color, size = 12, inset = -2, borderW = 2, shadow = null
   };
 }
 
+// ─── DANGER METER ───────────────────────────────────────────────
+function DangerMeter({ level, color }) {
+  if (!level) return null;
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+      {[1,2,3].map(i => (
+        <div key={i} style={{
+          width:"10px", height:"6px",
+          background: i <= level ? color : "#1a1a2a",
+          boxShadow: i <= level ? `0 0 5px ${color}` : "none",
+          transition: "all 0.2s",
+        }}/>
+      ))}
+    </div>
+  );
+}
+
 export function EventView({ node, player, onChoice }) {
-  // Variante evento: ogni variante ha testo E scelte coerenti
   const eventoVariant = useRef((() => {
     const r = Math.random();
     if (r < 0.34) return "lettore";
     if (r < 0.67) return "moneta";
     return "voce";
   })());
+
   const events = {
     ladro: {
       title: "Ladro di Dita",
@@ -42,12 +108,12 @@ export function EventView({ node, player, onChoice }) {
         : [
             ...(player.equippedGrattatore?.silent ? [{ label: "🎸 Passa inosservato (silenzioso)", action: "silentBypass" }] : []),
             { label: "Combatti!", action: "fight" },
-            { label: "Cedi un oggetto", action: "giveItem", condition: player.items.length > 0 },
+            { label: "Cedi un oggetto", action: "giveItem", condition: player.items.length > 0,
+              disabledNote: "zaino vuoto" },
             { label: "Scappa! (50%)", action: "flee" },
           ],
     },
     spacciatore: (() => {
-      // Sprint 4: se hai fatto la spia col Poliziotto, lo spacciatore lo sa e ti attacca
       if (player.snitchedOn) {
         return {
           title: "Lo Spacciatore — SA TUTTO",
@@ -70,9 +136,12 @@ export function EventView({ node, player, onChoice }) {
         choices: player.cappelloSbirroWorn
           ? [{ label: "🎩 Correre fa bene, amico. (cappello si consuma)", action: "cappelloVsLadro" }]
           : [
-              { label: `Sigaretta con Erba (€8)`, action: "buyHerb", condition: player.money >= 8 },
-              { label: `Gratta Contrabbando (€25)`, action: "buyContra", condition: player.money >= 25 },
-              { label: `🎫 Gratta VINCENTE GARANTITO (€15) — "fidati"`, action: "buyFalsoVincente", condition: player.money >= 15,
+              { label: `Sigaretta con Erba (€8)`, action: "buyHerb", condition: player.money >= 8,
+                disabledNote: `ti mancano €${Math.max(0,8-player.money)}` },
+              { label: `Gratta Contrabbando (€25)`, action: "buyContra", condition: player.money >= 25,
+                disabledNote: `ti mancano €${Math.max(0,25-player.money)}` },
+              { label: `🎫 Gratta VINCENTE GARANTITO (€15) — "fidati"`, action: "buyFalsoVincente",
+                condition: player.money >= 15, disabledNote: `ti mancano €${Math.max(0,15-player.money)}`,
                 tooltip: "Lo Spacciatore giura che vince. Qualcosa ti dice di non fidarti al 100%." },
               { label: "No grazie", action: "leave" },
             ],
@@ -83,9 +152,12 @@ export function EventView({ node, player, onChoice }) {
       art: NPC_ART.chirurgo,
       text: "\"Le unghie sono la finestra dell'anima... e le tue fanno schifo. Posso sistemarle. Intervento rapido, dolore relativo.\"",
       choices: [
-        { label: "Unghia di Plastica (€10)", action: "implant_plastica", condition: player.money >= 10 },
-        { label: "Unghia di Ferro (€25)", action: "implant_ferro", condition: player.money >= 25 },
-        { label: "Unghia d'Oro (€50)", action: "implant_oro", condition: player.money >= 50 },
+        { label: "Unghia di Plastica (€10)", action: "implant_plastica", condition: player.money >= 10,
+          disabledNote: `ti mancano €${Math.max(0,10-player.money)}` },
+        { label: "Unghia di Ferro (€25)", action: "implant_ferro", condition: player.money >= 25,
+          disabledNote: `ti mancano €${Math.max(0,25-player.money)}` },
+        { label: "Unghia d'Oro (€50)", action: "implant_oro", condition: player.money >= 50,
+          disabledNote: `ti mancano €${Math.max(0,50-player.money)}` },
         { label: "Vattene!", action: "leave" },
       ],
     },
@@ -96,11 +168,15 @@ export function EventView({ node, player, onChoice }) {
         ? "\"I soldi non ti servono per avere ciò che ti serve. Le unghie parlano, figliolo... e le tue mi dicono molto.\""
         : "\"Ho attraversato tre mercatini delle pulci e un sogno profetico per trovare questi grattatori. Ora sono tuoi — se li meriti.\"",
       choices: [
-        { label: `🔘 Bottone Magico (€5)`, action: "buyGrat_bottone", condition: player.money >= 5, tooltip: GRATTATORE_DEFS.bottone.desc },
-        { label: `🔩 Bullone Sacro (€7)`, action: "buyGrat_bullone", condition: player.money >= 7, tooltip: GRATTATORE_DEFS.bullone.desc },
-        { label: `💿 Disco Rotto (€18)`, action: "buyGrat_discoRotto", condition: player.money >= 18, tooltip: GRATTATORE_DEFS.discoRotto.desc },
+        { label: `🔘 Bottone Magico (€5)`, action: "buyGrat_bottone", condition: player.money >= 5,
+          disabledNote: `ti mancano €${Math.max(0,5-player.money)}`, tooltip: GRATTATORE_DEFS.bottone.desc },
+        { label: `🔩 Bullone Sacro (€7)`, action: "buyGrat_bullone", condition: player.money >= 7,
+          disabledNote: `ti mancano €${Math.max(0,7-player.money)}`, tooltip: GRATTATORE_DEFS.bullone.desc },
+        { label: `💿 Disco Rotto (€18)`, action: "buyGrat_discoRotto", condition: player.money >= 18,
+          disabledNote: `ti mancano €${Math.max(0,18-player.money)}`, tooltip: GRATTATORE_DEFS.discoRotto.desc },
         { label: `🦴 Offri 1 unghia → Bottone Magico gratis`, action: "barattoGrat_bottone",
-          condition: player.nails.filter(n => n.state !== "morta").length > 1, tooltip: GRATTATORE_DEFS.bottone.desc },
+          condition: player.nails.filter(n => n.state !== "morta").length > 1,
+          disabledNote: "non hai unghie da offrire", tooltip: GRATTATORE_DEFS.bottone.desc },
         { label: "Non mi interessa", action: "leave" },
       ],
     },
@@ -114,7 +190,6 @@ export function EventView({ node, player, onChoice }) {
       ],
     },
     evento: (() => {
-      // Il Vecchio: appare come "evento" se ha ancora visite rimaste
       const visits = player.vecchioVisits || 0;
       if (visits < 3 && node._isVecchio) {
         const d = VECCHIO_DIALOGHI[visits];
@@ -124,34 +199,35 @@ export function EventView({ node, player, onChoice }) {
       const TESTI = {
         lettore: "\"Le unghie non mentono, ragazzo. Le tue... vedo cose. Grandi o terribili, non so ancora.\"",
         moneta:  "\"Ehi! Quella moneta è mia! ...no aspetta, è tua. Forse. Raccoglila e vedi cosa succede.\"",
-        voce:    "\"...mi senti? Sono qui. Non girartiʼ — ascolta e basta.\"",
+        voce:    "\"...mi senti? Sono qui. Non girартiʼ — ascolta e basta.\"",
       };
       const SCELTE = {
         lettore: [
           { label: "⭐ Accetta la lettura (gratis) — rischio/ricompensa casuale", action: "acceptEvent" },
-          { label: `💰 Paga €10 per una lettura certa — +FORTUNA garantita`, action: "acceptEventPaid", condition: player.money >= 10 },
-          { label: `🦴 Offri un'unghia — il vecchio vuole qualcosa di vivo`, action: "acceptEventNail", condition: player.nails.filter(n=>n.state!=="morta").length > 1 },
+          { label: `💰 Paga €10 per una lettura certa — +FORTUNA garantita`, action: "acceptEventPaid",
+            condition: player.money >= 10, disabledNote: `ti mancano €${Math.max(0,10-player.money)}` },
+          { label: `🦴 Offri un'unghia — il vecchio vuole qualcosa di vivo`, action: "acceptEventNail",
+            condition: player.nails.filter(n=>n.state!=="morta").length > 1, disabledNote: "non hai unghie da offrire" },
           { label: "Ignoralo e vai", action: "leave" },
         ],
         moneta: [
           { label: "🪙 Raccoglila e affidati al caso — portafortuna o maledizione?", action: "acceptEvent" },
-          { label: `💰 Paghi €10 a un passante per farla \"leggere\" — +FORTUNA garantita`, action: "acceptEventPaid", condition: player.money >= 10 },
-          { label: `🦴 Scambia la moneta con un'unghia — rituale misterioso`, action: "acceptEventNail", condition: player.nails.filter(n=>n.state!=="morta").length > 1 },
+          { label: `💰 Paghi €10 a un passante per farla "leggere" — +FORTUNA garantita`, action: "acceptEventPaid",
+            condition: player.money >= 10, disabledNote: `ti mancano €${Math.max(0,10-player.money)}` },
+          { label: `🦴 Scambia la moneta con un'unghia — rituale misterioso`, action: "acceptEventNail",
+            condition: player.nails.filter(n=>n.state!=="morta").length > 1, disabledNote: "non hai unghie da offrire" },
           { label: "Lasciala per terra", action: "leave" },
         ],
         voce: [
           { label: "👂 Ascolta la voce — cosa vuole dirti?", action: "acceptEvent" },
-          { label: `💰 Offri €10 nell'aria — \"accetta il mio dono\" (fortuna garantita)`, action: "acceptEventPaid", condition: player.money >= 10 },
-          { label: `🦴 Sacrifica un'unghia — la voce chiede sangue`, action: "acceptEventNail", condition: player.nails.filter(n=>n.state!=="morta").length > 1 },
+          { label: `💰 Offri €10 nell'aria — "accetta il mio dono" (fortuna garantita)`, action: "acceptEventPaid",
+            condition: player.money >= 10, disabledNote: `ti mancano €${Math.max(0,10-player.money)}` },
+          { label: `🦴 Sacrifica un'unghia — la voce chiede sangue`, action: "acceptEventNail",
+            condition: player.nails.filter(n=>n.state!=="morta").length > 1, disabledNote: "non hai unghie da offrire" },
           { label: "Ignora e scappa", action: "leave" },
         ],
       };
-      return {
-        title: "Evento Misterioso",
-        art: NPC_ART.evento,
-        text: TESTI[v],
-        choices: SCELTE[v],
-      };
+      return { title: "Evento Misterioso", art: NPC_ART.evento, text: TESTI[v], choices: SCELTE[v] };
     })(),
     miniboss: {
       title: "Mini Boss del Tabacchino",
@@ -171,15 +247,22 @@ export function EventView({ node, player, onChoice }) {
         ? "\"Bravo, informatore. Ma non ti ho detto ancora basta. Documenti?\""
         : "\"Alt! Documenti! Cosa ci fa con tutti questi grattini? Lei non mi sembra un pensionato... né un tipo onesto.\"",
       choices: [
-        { label: "🎩 Mostra il Cappello Sbirro", action: "useCappello", condition: player.cappelloSbirroWorn },
-        { label: player.giornalettoRead ? "Paga la multa DOPPIA (€40)" : "Paga la multa (€20)", action: "pagaMulta", condition: player.money >= (player.giornalettoRead ? 40 : 20) },
-        { label: "🦴 Offri un'unghia invece di €20", action: "multaNail", condition: player.money < 20 && player.nails.filter(n=>n.state!=="morta").length > 1 },
-        // Sprint 4: Snitch — denuncia lo spacciatore per €30. Ti mette in pace col poliziotto,
-        // ma lo spacciatore scopre e ti attacca alla prossima visita.
-        { label: "🕵️ Fai la spia sullo spacciatore (+€30, addio sconti)", action: "snitchSpacciatore", condition: !player.snitchedOn,
+        { label: "🎩 Mostra il Cappello Sbirro", action: "useCappello",
+          condition: player.cappelloSbirroWorn, disabledNote: "non ce l'hai" },
+        { label: player.giornalettoRead ? "Paga la multa DOPPIA (€40)" : "Paga la multa (€20)",
+          action: "pagaMulta",
+          condition: player.money >= (player.giornalettoRead ? 40 : 20),
+          disabledNote: `ti mancano €${Math.max(0,(player.giornalettoRead?40:20)-player.money)}` },
+        { label: "🦴 Offri un'unghia invece di €20", action: "multaNail",
+          condition: player.money < 20 && player.nails.filter(n=>n.state!=="morta").length > 1,
+          disabledNote: "hai abbastanza € oppure non hai unghie" },
+        { label: "🕵️ Fai la spia sullo spacciatore (+€30, addio sconti)", action: "snitchSpacciatore",
+          condition: !player.snitchedOn, disabledNote: "già denunciato",
           tooltip: "Guadagni €30 + passi senza multa. Ma lo spacciatore ti vedrà come un ratto." },
-        { label: "🏃 Prova a scappare (20%)", action: "fintotonto" },
-        { label: "😰 Non ho i soldi... (manganellata)", action: "manganellata", condition: player.money < 20 && !player.cappelloSbirroWorn },
+        { label: "🏃 Prova a scappare (20%)", action: "fintotondo" },
+        { label: "😰 Non ho i soldi... (manganellata)", action: "manganellata",
+          condition: player.money < 20 && !player.cappelloSbirroWorn,
+          disabledNote: "hai i soldi o il cappello" },
       ],
     },
     anziana: (() => {
@@ -190,10 +273,8 @@ export function EventView({ node, player, onChoice }) {
         return {
           title: "👵 L'Anziana Maledetta",
           art: NPC_ART.anziana,
-          text: "\"Ho dato. Ho guarito. Ho pure pianto un po'. Ora basta — le mie mani hanno un limite settimanale. Vattene!\"",
-          choices: [
-            { label: "Ok nonna, scusa...", action: "leave" },
-          ],
+          text: "\"Ho dato. Ho guarito. Ho anche pianto un po'. Ora basta — le mie mani hanno un limite settimanale. Vattene!\"",
+          choices: [{ label: "Ok nonna, scusa...", action: "leave" }],
         };
       }
       if (allMax) {
@@ -201,9 +282,7 @@ export function EventView({ node, player, onChoice }) {
           title: "👵 L'Anziana Maledetta",
           art: NPC_ART.anziana,
           text: "\"Che belle mani... troppo belle. Fanno male solo a guardarle. NON È GIUSTO!\" *STRAPP* Ti strappa 2 unghie per gelosia morbosa!",
-          choices: [
-            { label: "NOOOO NONNA!", action: "anzianaStrappaGelosia" },
-          ],
+          choices: [{ label: "NOOOO NONNA!", action: "anzianaStrappaGelosia" }],
         };
       }
       if (alive <= 1) {
@@ -211,9 +290,7 @@ export function EventView({ node, player, onChoice }) {
           title: "👵 L'Anziana Maledetta",
           art: NPC_ART.anziana,
           text: "\"Madonna santa... guarda in che stato. Vieni qui, figliolo.\" Ti mette in mano un'unghia tolta da chi sa dove. Non chiedi.",
-          choices: [
-            { label: "Grazie nonnina 🥺", action: "anzianaRegala" },
-          ],
+          choices: [{ label: "Grazie nonnina 🥺", action: "anzianaRegala" }],
         };
       }
       return {
@@ -222,12 +299,11 @@ export function EventView({ node, player, onChoice }) {
         text: `\"Figliolo mio... avvicina quelle mani. Le unghie non mentono mai — e le tue hanno cose da raccontare.\" (Visita ${visits+1}/3)`,
         choices: [
           { label: "Porgi le mani", action: "anzianaTocca" },
-          {
-            label: "🙏 Chiedi la benedizione dell'Unghia Sacra (€40)",
+          { label: "🙏 Chiedi la benedizione dell'Unghia Sacra (€40)",
             action: "anzianaSacra",
             condition: !player.anzianaSacraGiven && player.money >= 40 && player.nails.some(n => n.state !== "morta"),
-            tooltip: "Una volta per run. Impianto sacro sull'unghia attiva: prossima grattata = vincita x5 GARANTITA.",
-          },
+            disabledNote: !player.anzianaSacraGiven ? `ti mancano €${Math.max(0,40-player.money)}` : "già ricevuta",
+            tooltip: "Una volta per run. Impianto sacro sull'unghia attiva: prossima grattata = vincita x3 GARANTITA." },
           { label: "No grazie nonna", action: "leave" },
         ],
       };
@@ -237,9 +313,12 @@ export function EventView({ node, player, onChoice }) {
       art: NPC_ART.sacerdote,
       text: "\"Figliolo... la Provvidenza sorride a chi dona senza calcolo. Ogni centesimo che offri torna moltiplicato — in modi che la matematica non spiega.\"",
       choices: [
-        { label: "Dona €5 (Fortuna +1, 3 turni)", action: "dona5", condition: player.money >= 5 },
-        { label: "Dona €15 (Fortuna +2, 5 turni)", action: "dona15", condition: player.money >= 15 },
-        { label: "Dona €30 (Fortuna +3, 8 turni)", action: "dona30", condition: player.money >= 30 },
+        { label: "Dona €5 — Fortuna +1 per 3 turni", action: "dona5",
+          condition: player.money >= 5, disabledNote: `ti mancano €${Math.max(0,5-player.money)}` },
+        { label: "Dona €15 — Fortuna +2 per 5 turni", action: "dona15",
+          condition: player.money >= 15, disabledNote: `ti mancano €${Math.max(0,15-player.money)}` },
+        { label: "Dona €30 — Fortuna +3 per 8 turni", action: "dona30",
+          condition: player.money >= 30, disabledNote: `ti mancano €${Math.max(0,30-player.money)}` },
         { label: "Non sono credente", action: "leave" },
       ],
     },
@@ -266,9 +345,11 @@ export function EventView({ node, player, onChoice }) {
           ] : []),
           ...(player.scratchCards.length > 0 ? [
             { label: "🔄 Scambia 1 grattino → 1 grattino raro", action: "bambinoSwap1" },
-            { label: "🔄 Scambia 2 grattini → 1 grattino LEGGENDARIO", action: "bambinoSwap2", condition: player.scratchCards.length >= 2 },
+            { label: "🔄 Scambia 2 grattini → 1 LEGGENDARIO", action: "bambinoSwap2",
+              condition: player.scratchCards.length >= 2, disabledNote: "ti serve almeno un altro grattino" },
           ] : []),
-          { label: "💰 Compra grattino raro (€30)", action: "bambinoBuy", condition: player.money >= 30 },
+          { label: "💰 Compra grattino raro (€30)", action: "bambinoBuy",
+            condition: player.money >= 30, disabledNote: `ti mancano €${Math.max(0,30-player.money)}` },
           { label: !hasGrattate && player.scratchCards.length === 0 ? "Ciao piccolo, torno dopo" : "No grazie piccolo", action: "leave" },
         ],
       };
@@ -300,7 +381,7 @@ export function EventView({ node, player, onChoice }) {
         text: alive.length === 0
           ? '"Niente da operare. Anzi, non so neanche come sei ancora vivo. Vattene."'
           : hasImplant
-          ? `"Mani già operative. Non tocco il lavoro altrui — codice deontologico. O almeno quello che ne rimane."`
+          ? '"Mani già operative. Non tocco il lavoro altrui — codice deontologico. O almeno quello che ne rimane."'
           : '"Impianti d\'ultima generazione. Non chiedere la laurea — chiediti se puoi permetterti di NON farlo. ⚠️ 25% chance di... complicazioni."',
         choices: alive.length === 0 || hasImplant
           ? [{ label: "Capito... arrivederci", action: "leave" }]
@@ -309,6 +390,7 @@ export function EventView({ node, player, onChoice }) {
               label: `${impl.emoji} ${impl.name} (€${impl.cost}) — ${impl.rarity}`,
               action: `macellaio_${impl.id}`,
               condition: player.money >= impl.cost,
+              disabledNote: `ti mancano €${Math.max(0,impl.cost-player.money)}`,
               tooltip: impl.desc + " · ⚠️ 25% fallimento → unghia morta!",
             })),
             { label: "Troppo rischioso, scappo", action: "leave" },
@@ -327,11 +409,13 @@ export function EventView({ node, player, onChoice }) {
         ? (player.nails?.some(n => n.state === "piede")
           ? [{ label: "Grazie maestro 🙏", action: "leave" }]
           : [
-            { label: "🦶 L'Unghia del Piede (€100)", action: "unghiaPiede", condition: player.money >= 100 },
+            { label: "🦶 L'Unghia del Piede (€100)", action: "unghiaPiede",
+              condition: player.money >= 100, disabledNote: `ti mancano €${Math.max(0,100-player.money)}` },
             { label: "No grazie, passo", action: "leave" },
           ])
         : [
-          { label: "🙌 Impara la Doppia Mano (€200)", action: "learnAmbidestri", condition: player.money >= 200 },
+          { label: "🙌 Impara la Doppia Mano (€200)", action: "learnAmbidestri",
+            condition: player.money >= 200, disabledNote: `ti mancano €${Math.max(0,200-player.money)}` },
           { label: "Troppo caro, addio", action: "leave" },
         ],
     },
@@ -340,9 +424,12 @@ export function EventView({ node, player, onChoice }) {
       art: `  ╭──╮\n  │茶│\n  │~ │\n  ╰┬─╯\n  /│\\\n   🍵`,
       text: "\"欢迎, benvenuto. Il tè cura il corpo e l'anima. Scegli la tua miscela — ogni tazza ha un prezzo e un destino.\"",
       choices: [
-        { label: "🍵 Tè Verde (€5) — Cura 1 unghia + Fortune +1", action: "teVerde", condition: player.money >= 5 },
-        { label: "🍵 Tè del Drago (€15) — Cura 2 unghie + Fortune +2 per 5 turni", action: "teDrago", condition: player.money >= 15 },
-        { label: "🍵 Tè d'Oro Imperiale (€40) — Cura TUTTE + smalto su unghia attiva", action: "teOro", condition: player.money >= 40 },
+        { label: "🍵 Tè Verde (€5) — Cura 1 unghia + Fortuna +1", action: "teVerde",
+          condition: player.money >= 5, disabledNote: `ti mancano €${Math.max(0,5-player.money)}` },
+        { label: "🍵 Tè del Drago (€15) — Cura 2 unghie + Fortuna +2 per 5 turni", action: "teDrago",
+          condition: player.money >= 15, disabledNote: `ti mancano €${Math.max(0,15-player.money)}` },
+        { label: "🍵 Tè d'Oro Imperiale (€40) — Cura TUTTE + smalto su unghia attiva", action: "teOro",
+          condition: player.money >= 40, disabledNote: `ti mancano €${Math.max(0,40-player.money)}` },
         { label: "🐲 Parlami del Drago (gratis)", action: "dragoLore" },
         { label: "Non ho sete, grazie", action: "leave" },
       ],
@@ -357,8 +444,12 @@ export function EventView({ node, player, onChoice }) {
         choices: hasGuanto
           ? [{ label: "Grazie, torno dopo aver grattato", action: "leave" }]
           : [
-              { label: "🧤 Compra il Guanto da BOSS (€60)", action: "buyGuantoBoss", condition: player.money >= 60, tooltip: GRATTATORE_DEFS.guantoBoss.desc },
-              { label: "🦴 Baratto: 1 unghia + €20 → Guanto da BOSS", action: "barattoGuantoBoss", condition: player.money >= 20 && player.nails.filter(n => n.state !== "morta").length > 1 },
+              { label: "🧤 Compra il Guanto da BOSS (€60)", action: "buyGuantoBoss",
+                condition: player.money >= 60, disabledNote: `ti mancano €${Math.max(0,60-player.money)}`,
+                tooltip: GRATTATORE_DEFS.guantoBoss.desc },
+              { label: "🦴 Baratto: 1 unghia + €20 → Guanto da BOSS", action: "barattoGuantoBoss",
+                condition: player.money >= 20 && player.nails.filter(n => n.state !== "morta").length > 1,
+                disabledNote: "ti servono €20 e almeno 2 unghie vive" },
               { label: "Troppo caro, passo", action: "leave" },
             ],
       };
@@ -368,17 +459,18 @@ export function EventView({ node, player, onChoice }) {
   const ev = events[node.type] || events.evento;
   const bigArt = SPR_BIG[node.type];
   const pal = NPC_PALETTE[node.type] || [C.text, C.dim, C.gold];
+  const cat = NPC_CAT[node.type] || NPC_CAT.evento;
+  // Colore principale: usa NPC_CAT se ben definito, altrimenti pal[0]
+  const accent = cat.color;
 
   // Typing effect
   const [typedChars, setTypedChars] = useState(0);
   const fullText = ev.text;
   const typingDone = typedChars >= fullText.length;
-  useEffect(() => {
-    setTypedChars(0);
-  }, [node.type]);
+  useEffect(() => { setTypedChars(0); }, [node.type]);
   useEffect(() => {
     if (typedChars >= fullText.length) return;
-    const t = setTimeout(() => setTypedChars(c => c + 1), 22);
+    const t = setTimeout(() => setTypedChars(c => c + 1), 20);
     return () => clearTimeout(t);
   }, [typedChars, fullText]);
 
@@ -392,11 +484,11 @@ export function EventView({ node, player, onChoice }) {
     return () => clearInterval(id);
   }, []);
 
-  // Undertale-style talk sound — short beep per character
+  // Talk sound
   const talkSoundRef = useRef(null);
   useEffect(() => {
     if (typedChars >= fullText.length) return;
-    if (typedChars % 2 !== 0) return; // ogni 2 caratteri
+    if (typedChars % 2 !== 0) return;
     const ch = fullText[typedChars];
     if (ch === " " || ch === "\n") return;
     try {
@@ -404,176 +496,290 @@ export function EventView({ node, player, onChoice }) {
       talkSoundRef.current = ctx;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      // Pitch varia per NPC
       const basePitch = node.type === "mendicante" ? 140 : node.type === "spacciatore" ? 180
         : node.type === "bambino" ? 320 : node.type === "anziana" ? 160
         : node.type === "boss" ? 100 : 220;
       osc.frequency.value = basePitch + (ch.charCodeAt(0) % 8) * 15;
       osc.type = "square";
-      gain.gain.value = 0.06;
+      gain.gain.value = 0.05;
       osc.connect(gain).connect(ctx.destination);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.04);
     } catch {}
   }, [typedChars]);
 
-  // ─── Vintage brackets: outer panel (pal[0]), portrait (pal[2]), dialog (pal[1]) ───
-  const panelCorners = cornerBrackets(pal[0], 14, -3, 2, `0 0 8px ${pal[0]}88`);
-  const portraitCorners = cornerBrackets(pal[2], 9, -2, 1, `0 0 4px ${pal[2]}66`);
-  const dialogCorners = cornerBrackets(pal[1], 9, -2, 1, `0 0 4px ${pal[1]}66`);
+  const cb = cornerBrackets(accent, 13, -3, 2);
+  const cbInner = cornerBrackets(pal[1], 8, -2, 1);
 
   return (
     <div style={{
-      ...S.panel, maxWidth:"900px", margin:"10px auto",
-      padding:"12px 12px",
+      maxWidth:"900px", margin:"10px auto",
       position:"relative",
-      boxShadow:`0 0 18px ${pal[0]}33, inset 0 0 24px #00000088`,
+      background:"#04040e",
+      border:`2px solid ${accent}66`,
+      boxShadow:`0 0 24px ${accent}22, inset 0 0 30px ${accent}06`,
     }}>
-      {/* Corner brackets outer panel */}
-      <span style={panelCorners.tl} /><span style={panelCorners.tr} />
-      <span style={panelCorners.bl} /><span style={panelCorners.br} />
+      {/* Inline keyframes */}
+      <style>{`
+        @keyframes evChoiceFadeIn {
+          from { opacity:0; transform:translateY(6px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes evPulse {
+          0%,100% { opacity:1; } 50% { opacity:0.4; }
+        }
+      `}</style>
 
-      {/* ─── Vintage title bar: solid badge + neon title ─── */}
-      <div style={{textAlign:"center", marginBottom:"14px"}}>
+      {/* Corner brackets outer */}
+      <span style={cb.tl}/><span style={cb.tr}/>
+      <span style={cb.bl}/><span style={cb.br}/>
+
+      {/* ── HEADER NPC ─────────────────────────────────────────── */}
+      <div style={{
+        display:"flex", alignItems:"center", gap:"10px",
+        padding:"10px 14px 8px",
+        borderBottom:`1px solid ${accent}33`,
+        background:`linear-gradient(180deg, ${accent}12 0%, transparent 100%)`,
+        flexWrap:"nowrap",
+      }}>
+        {/* Categoria badge */}
         <div style={{
-          display:"inline-block", background:pal[0], color:"#000",
-          padding:"3px 14px", fontSize:"10px", fontWeight:"bold",
-          letterSpacing:"3px", fontFamily:FONT,
-          boxShadow:`0 0 8px ${pal[0]}88`,
-          marginBottom:"6px",
+          flexShrink:0,
+          background: accent, color:"#000",
+          fontSize:"7px", fontWeight:"bold", letterSpacing:"2px",
+          padding:"3px 8px", fontFamily:FONT,
+          boxShadow:`0 0 8px ${accent}88`,
+          whiteSpace:"nowrap",
         }}>
-          ★ EVENTO ★
+          {cat.icon} {cat.label}
         </div>
+
+        {/* Titolo NPC */}
         <div style={{
-          color:pal[0], fontSize:"16px", fontWeight:"bold",
-          letterSpacing:"2px", fontFamily:FONT,
-          textShadow:`0 0 8px ${pal[0]}, 0 0 14px ${pal[0]}66`,
+          flex:1, minWidth:0,
+          color:accent, fontFamily:FONT, fontWeight:"bold",
+          fontSize:"15px", letterSpacing:"2px",
+          textShadow:`0 0 10px ${accent}88`,
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
         }}>
-          ⬡ {ev.title} ⬡
+          {ev.title}
         </div>
+
+        {/* Danger meter */}
+        {cat.danger > 0 && (
+          <div style={{flexShrink:0, display:"flex", alignItems:"center", gap:"5px"}}>
+            <span style={{fontSize:"7px", color:"#ff4444", letterSpacing:"1px", fontFamily:FONT, opacity:0.7}}>
+              PERICOLO
+            </span>
+            <DangerMeter level={cat.danger} color="#ff3355"/>
+          </div>
+        )}
       </div>
 
-      {/* ── Layout: flexWrap puro — si stacca in colonna quando < 300px ── */}
+      {/* ── BODY — portrait + dialogue ─────────────────────────── */}
       <div style={{
-        display:"flex",
-        flexWrap:"wrap",
-        gap:"10px",
-        alignItems:"flex-start",
+        display:"flex", gap:"0",
+        alignItems:"stretch",
       }}>
-        {/* ── RITRATTO ── */}
+
+        {/* ── PORTRAIT COLUMN ──────────────────────────────────── */}
         {bigArt && (
           <div style={{
-            flexShrink:0,
-            width:"140px",
-            maxWidth:"140px",
-            position:"relative",
+            flexShrink:0, width:"120px",
+            borderRight:`1px solid ${accent}22`,
+            background:`linear-gradient(180deg, ${accent}08 0%, transparent 100%)`,
+            display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center",
+            padding:"12px 6px 10px",
+            gap:"6px",
           }}>
-            <span style={portraitCorners.tl} /><span style={portraitCorners.tr} />
-            <span style={portraitCorners.bl} /><span style={portraitCorners.br} />
-            <pre style={{
-              ...S.pre,
-              fontSize:"7px",
-              lineHeight:"1.15",
-              border:`1px solid ${pal[2]}55`, padding:"6px 8px",
-              background:"#000000", whiteSpace:"pre", overflow:"hidden",
-              maxHeight:"160px",
-              boxShadow:`inset 0 0 18px ${pal[0]}22`,
-              margin:0,
-            }}>
-              {SPR_COLOR[node.type]
-                ? SPR_COLOR[node.type].map((row, i) => (
-                    <span key={i}>
-                      {row.map((seg, j) => {
-                        const [text, color] = Array.isArray(seg) ? seg : [seg, pal[0]];
-                        const t = blink && (i === 4 || i === 5) ? text.replace(/[•◕⊕∞☠><=;.◉]/g, "─") : text;
-                        return <span key={j} style={{color, textShadow:`0 0 6px ${color}44`}}>{t}</span>;
-                      })}
-                      {"\n"}
-                    </span>
-                  ))
-                : normalizePortrait(bigArt).map((line, i) => {
-                    const t = blink && (i === 4 || i === 5) ? line.replace(/[•◕⊕∞☠><=;.]/g, "─") : line;
-                    return <span key={i} style={{color:pal[0], textShadow:`0 0 6px ${pal[0]}44`}}>{t}{"\n"}</span>;
-                  })
-              }
-            </pre>
+            <div style={{position:"relative", width:"100%"}}>
+              <span style={cornerBrackets(accent+"88", 7, -2, 1).tl}/>
+              <span style={cornerBrackets(accent+"88", 7, -2, 1).tr}/>
+              <span style={cornerBrackets(accent+"88", 7, -2, 1).bl}/>
+              <span style={cornerBrackets(accent+"88", 7, -2, 1).br}/>
+              <pre style={{
+                color: accent+"cc", fontSize:"7px", lineHeight:"1.2",
+                margin:0, padding:"4px 2px",
+                fontFamily:FONT,
+                background:"#020208",
+                border:`1px solid ${accent}22`,
+                textShadow:`0 0 5px ${accent}44`,
+                overflow:"hidden",
+                maxHeight:"140px",
+              }}>
+                {SPR_COLOR[node.type]
+                  ? SPR_COLOR[node.type].map((row, i) => (
+                      <span key={i}>
+                        {row.map((seg, j) => {
+                          const [text, color] = Array.isArray(seg) ? seg : [seg, accent];
+                          const t = blink && (i === 4 || i === 5) ? text.replace(/[•◕⊕∞☠><=;.◉]/g, "─") : text;
+                          return <span key={j} style={{color, textShadow:`0 0 4px ${color}44`}}>{t}</span>;
+                        })}
+                        {"\n"}
+                      </span>
+                    ))
+                  : normalizePortrait(bigArt).map((line, i) => {
+                      const t = blink && (i === 4 || i === 5) ? line.replace(/[•◕⊕∞☠><=;.]/g, "─") : line;
+                      return <span key={i} style={{color:accent, textShadow:`0 0 4px ${accent}44`}}>{t}{"\n"}</span>;
+                    })
+                }
+              </pre>
+            </div>
+            {/* NPC name plate */}
             <div style={{
-              marginTop:"4px", textAlign:"center",
-              fontSize:"8px", color:pal[2], letterSpacing:"2px",
-              fontFamily:FONT, opacity:0.7,
+              width:"100%", textAlign:"center",
+              background: `${accent}22`,
+              border:`1px solid ${accent}44`,
+              padding:"2px 4px",
+              color:accent, fontSize:"7px", fontFamily:FONT,
+              letterSpacing:"1px", fontWeight:"bold",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
             }}>
-              ─ RITRATTO ─
+              {ev.title.replace(/[👵🚔⛪📱🧙🔪🎩]/gu,"").trim()}
             </div>
           </div>
         )}
 
-        {/* ── DIALOGO + SCELTE — flex:1 + minWidth:0 per riempire spazio ── */}
-        <div style={{flex:"1 1 140px", minWidth:0}}>
-          {/* Dialog blockquote con typing */}
-          <div style={{position:"relative", marginBottom:"12px"}}>
-            <span style={dialogCorners.tl} /><span style={dialogCorners.tr} />
-            <span style={dialogCorners.bl} /><span style={dialogCorners.br} />
+        {/* ── DIALOGUE + CHOICES ───────────────────────────────── */}
+        <div style={{flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:"0"}}>
+
+          {/* Dialogue bubble */}
+          <div style={{
+            position:"relative",
+            padding:"14px 16px 12px",
+            borderBottom:`1px solid ${accent}22`,
+            cursor:"pointer",
+            minHeight:"80px",
+            background:`linear-gradient(180deg, ${pal[1]}06 0%, transparent 60%)`,
+          }}
+          onClick={() => { if (!typingDone) setTypedChars(fullText.length); }}
+          >
+            <span style={cbInner.tl}/><span style={cbInner.tr}/>
+
+            {/* Quote open */}
+            <div style={{color:pal[1], fontSize:"18px", lineHeight:"0.7", opacity:0.6, marginBottom:"4px"}}>❝</div>
+
+            {/* Typed text */}
             <div style={{
-              border:`2px solid ${pal[1]}88`,
-              padding:"10px 12px",
-              background:"#020208",
-              minHeight:"60px", cursor:"pointer",
-              boxShadow:`inset 0 0 16px ${pal[1]}11, 0 0 8px ${pal[1]}22`,
-            }} onClick={() => { if (!typingDone) setTypedChars(fullText.length); }}>
-              <div style={{
-                color:pal[1], fontSize:"16px", lineHeight:"0.8",
-                opacity:0.7, marginBottom:"2px",
-              }}>❝</div>
-              <div style={{
-                color:C.text,
-                fontSize:"13px",
-                lineHeight:"1.7",
-                fontStyle:"italic", padding:"0 4px",
-              }}>
-                {fullText.slice(0, typedChars)}
-                {!typingDone && <span style={{color:pal[0], animation:"blink 0.5s infinite"}}>▌</span>}
-              </div>
-              {typingDone && (
-                <div style={{
-                  color:pal[1], fontSize:"16px", lineHeight:"0.8",
-                  opacity:0.7, textAlign:"right", marginTop:"2px",
-                }}>❞</div>
-              )}
+              color:"#e8e8e8", fontSize:"13px", lineHeight:"1.8",
+              fontStyle:"italic", minHeight:"32px",
+            }}>
+              {fullText.slice(0, typedChars)}
               {!typingDone && (
-                <div style={{color:C.dim, fontSize:"9px", marginTop:"8px", textAlign:"right"}}>
-                  [tocca per completare]
-                </div>
+                <span style={{color:accent, animation:"evPulse 0.5s step-start infinite", marginLeft:"1px"}}>▌</span>
               )}
             </div>
+
+            {typingDone && (
+              <div style={{color:pal[1], fontSize:"18px", lineHeight:"0.7", opacity:0.6, textAlign:"right", marginTop:"4px"}}>❞</div>
+            )}
+
+            {!typingDone && (
+              <div style={{
+                position:"absolute", bottom:"6px", right:"10px",
+                color:C.dim, fontSize:"8px", letterSpacing:"1px", fontFamily:FONT,
+              }}>tocca per saltare →</div>
+            )}
           </div>
 
-          {/* Choices */}
+          {/* ── CHOICES ─────────────────────────────────────────── */}
           {typingDone && (
-            <div>
+            <div style={{padding:"8px 10px 10px", display:"flex", flexDirection:"column", gap:"5px"}}>
+              {/* Section label */}
               <div style={{
-                fontSize:"9px", color:pal[2], letterSpacing:"2px",
-                fontFamily:FONT, marginBottom:"8px", opacity:0.85,
+                fontSize:"8px", color:accent+"99", letterSpacing:"2.5px",
+                fontFamily:FONT, marginBottom:"3px",
+                display:"flex", alignItems:"center", gap:"6px",
               }}>
-                ─ SCELTE ─
+                <div style={{flex:1, height:"1px", background:`${accent}33`}}/>
+                SCEGLI
+                <div style={{flex:1, height:"1px", background:`${accent}33`}}/>
               </div>
-              <div style={{display:"flex", flexDirection:"column", gap:"7px"}}>
-                {ev.choices.map((ch, i) => (
-                  <Tooltip key={i} text={ch.tooltip || ""}>
-                    <Btn
-                      onClick={() => onChoice(ch.action)}
-                      disabled={ch.condition === false}
-                      variant={ch.action === "fight" ? "danger" : ch.action === "leave" ? "normal" : "gold"}
+
+              {ev.choices.map((ch, i) => {
+                const isDisabled = ch.condition === false;
+                const meta = actionMeta(ch.action, ch.label);
+                const cost = extractCost(ch.label);
+                const badgeText = cost || meta.badge;
+                const badgeCol = isDisabled ? "#333344" : meta.col;
+
+                return (
+                  <Tooltip key={i} text={ch.tooltip || (isDisabled && ch.disabledNote ? `⛔ ${ch.disabledNote}` : "")}>
+                    <div
+                      onClick={() => !isDisabled && onChoice(ch.action)}
                       style={{
-                        fontSize:"12px",
-                        padding:"9px 12px",
-                        width:"100%", textAlign:"left",
-                        lineHeight:"1.3",
+                        display:"flex", alignItems:"center", gap:"8px",
+                        padding:"10px 10px",
+                        background: isDisabled
+                          ? "#07070d"
+                          : `${meta.col}08`,
+                        border:`1px solid ${isDisabled ? "#1a1a28" : meta.col + "44"}`,
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                        opacity: isDisabled ? 0.55 : 1,
+                        transition:"transform 0.1s, background 0.15s, border-color 0.15s",
+                        userSelect:"none",
+                        animation:`evChoiceFadeIn 0.25s ${i * 0.06}s both ease-out`,
+                        minHeight:"44px", // Apple HIG tap target
+                      }}
+                      onMouseEnter={e => {
+                        if (!isDisabled) {
+                          e.currentTarget.style.background = `${meta.col}18`;
+                          e.currentTarget.style.borderColor = `${meta.col}88`;
+                          e.currentTarget.style.transform = "translateX(2px)";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = isDisabled ? "#07070d" : `${meta.col}08`;
+                        e.currentTarget.style.borderColor = isDisabled ? "#1a1a28" : `${meta.col}44`;
+                        e.currentTarget.style.transform = "translateX(0)";
+                      }}
+                      onTouchStart={e => { if (!isDisabled) e.currentTarget.style.transform = "scale(0.98)"; }}
+                      onTouchEnd={e => { e.currentTarget.style.transform = "scale(1)"; }}
+                    >
+                      {/* Indice */}
+                      <span style={{
+                        flexShrink:0, width:"16px",
+                        color: isDisabled ? "#333" : badgeCol,
+                        fontSize:"9px", fontFamily:FONT, fontWeight:"bold",
+                        textAlign:"center", opacity:0.8,
+                      }}>[{i+1}]</span>
+
+                      {/* Testo scelta */}
+                      <span style={{
+                        flex:1, minWidth:0,
+                        color: isDisabled ? "#444455" : "#d8d8e8",
+                        fontSize:"12px", lineHeight:"1.4",
                       }}>
-                      [{i+1}] {ch.label}
-                    </Btn>
+                        {ch.label}
+                        {/* Disabled note inline */}
+                        {isDisabled && ch.disabledNote && (
+                          <span style={{
+                            display:"block", fontSize:"9px",
+                            color:"#555566", marginTop:"2px", fontStyle:"italic",
+                          }}>
+                            ⛔ {ch.disabledNote}
+                          </span>
+                        )}
+                      </span>
+
+                      {/* Badge costo/tipo */}
+                      <div style={{
+                        flexShrink:0,
+                        background: isDisabled ? "#0a0a14" : `${badgeCol}18`,
+                        border:`1px solid ${isDisabled ? "#222233" : badgeCol + "55"}`,
+                        color: isDisabled ? "#333344" : badgeCol,
+                        fontSize:"8px", fontWeight:"bold",
+                        padding:"3px 7px", letterSpacing:"0.5px",
+                        fontFamily:FONT, whiteSpace:"nowrap",
+                        minWidth:"40px", textAlign:"center",
+                      }}>
+                        {badgeText}
+                      </div>
+                    </div>
                   </Tooltip>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
