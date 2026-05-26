@@ -2,9 +2,22 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { C, FONT } from "../data/theme.js";
 
+// Su touch device i tooltip non hanno senso — li disabilitiamo completamente.
+// Usiamo una costante calcolata una volta sola: se il device ha il tocco primario
+// (coarse pointer = dito) oppure non ha mouse, saltiamo il tooltip.
+const isTouchDevice =
+  window.matchMedia("(pointer: coarse)").matches ||
+  !window.matchMedia("(pointer: fine)").matches;
+
 export function Tooltip({ text, children, color }) {
   const [pos, setPos] = useState(null);
   const borderCol = color || C.magenta;
+
+  // Su mobile renderizziamo solo i children, zero overhead
+  if (isTouchDevice) {
+    return <span style={{display:"block", cursor:"inherit"}}>{children}</span>;
+  }
+
   const tooltipEl = pos && text
     ? createPortal(
         <div style={{
@@ -18,6 +31,7 @@ export function Tooltip({ text, children, color }) {
         document.body
       )
     : null;
+
   return (
     <span style={{display:"block", cursor:"inherit"}}
       onMouseMove={e => {
