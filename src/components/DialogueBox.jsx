@@ -242,29 +242,74 @@ export function CarmeloLogMini({ messages, color }) {
 }
 
 // ─── CARMELO SCRATCH STRIP ──────────────────────────────────
-// Striscia compatta (44px) con ticker CSS — scorre orizzontalmente
-// a tempo proporzionale alla lunghezza del testo. Stessa logica di
-// NpcCommentStrip ma con badge Carmelo fisso a sinistra.
+// Striscia compatta (44px): typewriter lettera per lettera + scroll
+// che segue il cursore (overflow a sinistra mentre si scrive).
+// Dopo la fine: scorre indietro lentamente per rileggere dall'inizio.
 export function CarmeloScratchStrip({ messages, color }) {
   const latest = messages && messages.length > 0 ? messages[messages.length - 1] : "";
   const latestPlain = msgPlainText(latest);
-  const [key, setKey] = useState(0);
+  const [typedText, setTypedText] = useState("");
+  const [done, setDone] = useState(true);
+  const textRef  = useRef(null);
+  const wrapRef  = useRef(null);
 
+  // Ogni volta che arriva un nuovo messaggio: reset e riparti
   useEffect(() => {
-    if (latestPlain) setKey(k => k + 1);
+    if (!latestPlain) return;
+    setTypedText("");
+    setDone(false);
+    // Resetta la posizione del testo
+    if (textRef.current) textRef.current.style.transform = "translateX(0)";
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i >= latestPlain.length) { clearInterval(iv); setDone(true); return; }
+      setTypedText(latestPlain.slice(0, i + 1));
+      if (i % 3 === 0 && latestPlain[i] !== ' ' && latestPlain[i] !== '"') AudioEngine.dialogueTick();
+      i++;
+    }, 28);
+    return () => clearInterval(iv);
   }, [latestPlain]);
 
-  if (!latest) return null;
-  const duration = Math.max(8, latestPlain.length * 0.09);
+  // Dopo ogni carattere: sposta il testo a sinistra per tenere il cursore visibile
+  useEffect(() => {
+    if (!textRef.current || !wrapRef.current) return;
+    const overflow = textRef.current.scrollWidth - wrapRef.current.clientWidth;
+    if (overflow > 0) {
+      textRef.current.style.transform = `translateX(-${overflow}px)`;
+    }
+  }, [typedText]);
 
+  // Dopo la fine: torna lentamente all'inizio per rileggere il testo
+  useEffect(() => {
+    if (!done || !textRef.current || !wrapRef.current) return;
+    const overflow = textRef.current.scrollWidth - wrapRef.current.clientWidth;
+    if (overflow > 2) {
+      // Pausa 0.8s poi scorre indietro in 1.5s
+      const t = setTimeout(() => {
+        if (textRef.current) {
+          textRef.current.style.transition = `transform 1.5s ease-in-out`;
+          textRef.current.style.transform = "translateX(0)";
+        }
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [done]);
+
+  const skip = () => {
+    setTypedText(latestPlain);
+    setDone(true);
+  };
+
+  if (!latest) return null;
   return (
-    <div style={{
+    <div onClick={skip} style={{
       flexShrink:0, height:"44px",
       display:"flex", alignItems:"stretch",
       background:"#030308",
       borderTop:`1px solid ${color}44`,
       overflow:"hidden",
       boxShadow:`0 -4px 16px #00000066`,
+      cursor:"pointer",
     }}>
       {/* Badge NPC fisso */}
       <div style={{
@@ -274,22 +319,25 @@ export function CarmeloScratchStrip({ messages, color }) {
         background:`${color}08`,
         fontSize:"18px", lineHeight:1,
       }}>🧓</div>
-      {/* Area testo scorrevole */}
-      <div style={{
-        flex:1, position:"relative", overflow:"hidden",
-        maskImage:"linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
-        WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+      {/* Area testo — overflow hidden, il testo si sposta via transform */}
+      <div ref={wrapRef} style={{
+        flex:1, overflow:"hidden", position:"relative", display:"flex", alignItems:"center",
+        maskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+        WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
       }}>
-        <div key={key} style={{
-          position:"absolute", left:"100%", top:0,
-          whiteSpace:"nowrap", lineHeight:"44px",
-          animation:`newsTicker ${duration}s linear forwards`,
-          willChange:"transform",
+        <div ref={textRef} style={{
+          whiteSpace:"nowrap",
           color: color+"cc", fontSize:"12px", fontStyle:"italic",
           textShadow:`0 0 8px ${color}33`,
           letterSpacing:"0.3px",
+          willChange:"transform",
+          // transition viene impostata solo dopo la fine (vedi useEffect[done])
+          transition:"none",
         }}>
-          {latestPlain}
+          {typedText}
+          {!done && (
+            <span style={{color, animation:"dialogueCursor 0.5s step-start infinite"}}>▌</span>
+          )}
         </div>
       </div>
     </div>
