@@ -37,6 +37,9 @@ function ScrollRow({ children, bg = "#05050b" }) {
         scrollbarWidth:"none",
         msOverflowStyle:"none",
         WebkitOverflowScrolling:"touch",
+        // Impedisce che lo swipe orizzontale scorra la pagina verticale
+        touchAction:"pan-x",
+        overscrollBehaviorX:"contain",
       }}>
         {children}
       </div>
