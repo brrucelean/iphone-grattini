@@ -242,62 +242,56 @@ export function CarmeloLogMini({ messages, color }) {
 }
 
 // ─── CARMELO SCRATCH STRIP ──────────────────────────────────
-// Striscia compatta (40px) con typewriter dell'ULTIMO messaggio.
-// Usata nell'overlay del grattino al posto di CarmeloLogMini.
+// Striscia compatta (44px) con ticker CSS — scorre orizzontalmente
+// a tempo proporzionale alla lunghezza del testo. Stessa logica di
+// NpcCommentStrip ma con badge Carmelo fisso a sinistra.
 export function CarmeloScratchStrip({ messages, color }) {
   const latest = messages && messages.length > 0 ? messages[messages.length - 1] : "";
   const latestPlain = msgPlainText(latest);
-  const [typedText, setTypedText] = useState("");
-  const [done, setDone] = useState(true);
+  const [key, setKey] = useState(0);
 
   useEffect(() => {
-    if (!latestPlain) return;
-    setTypedText(""); setDone(false);
-    let i = 0;
-    const iv = setInterval(() => {
-      if (i >= latestPlain.length) { clearInterval(iv); setDone(true); return; }
-      setTypedText(latestPlain.slice(0, i + 1));
-      if (i % 3 === 0 && latestPlain[i] !== ' ' && latestPlain[i] !== '"') AudioEngine.dialogueTick();
-      i++;
-    }, 28);
-    return () => clearInterval(iv);
+    if (latestPlain) setKey(k => k + 1);
   }, [latestPlain]);
 
-  const skip = () => { setTypedText(latestPlain); setDone(true); };
-
   if (!latest) return null;
+  const duration = Math.max(8, latestPlain.length * 0.09);
+
   return (
-    <div onClick={skip} style={{
+    <div style={{
       flexShrink:0, height:"44px",
-      display:"flex", alignItems:"center", gap:"8px",
+      display:"flex", alignItems:"stretch",
       background:"#030308",
       borderTop:`1px solid ${color}44`,
-      padding:"0 10px",
-      cursor:"pointer",
+      overflow:"hidden",
       boxShadow:`0 -4px 16px #00000066`,
     }}>
-      {/* Badge NPC */}
+      {/* Badge NPC fisso */}
       <div style={{
-        flexShrink:0, width:"26px", height:"26px",
+        flexShrink:0, width:"42px",
         display:"flex", alignItems:"center", justifyContent:"center",
-        background:`${color}18`, border:`1px solid ${color}44`,
-        fontSize:"14px", lineHeight:1,
+        borderRight:`1px solid ${color}22`,
+        background:`${color}08`,
+        fontSize:"18px", lineHeight:1,
       }}>🧓</div>
-      {/* Testo animato — singola riga con overflow ellipsis */}
-      <div style={{flex:1, minWidth:0, overflow:"hidden"}}>
-        <div style={{
-          color: color+"cc", fontSize:"11px", fontStyle:"italic",
-          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-          lineHeight:1.3,
+      {/* Area testo scorrevole */}
+      <div style={{
+        flex:1, position:"relative", overflow:"hidden",
+        maskImage:"linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+        WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
+      }}>
+        <div key={key} style={{
+          position:"absolute", left:"100%", top:0,
+          whiteSpace:"nowrap", lineHeight:"44px",
+          animation:`newsTicker ${duration}s linear forwards`,
+          willChange:"transform",
+          color: color+"cc", fontSize:"12px", fontStyle:"italic",
+          textShadow:`0 0 8px ${color}33`,
+          letterSpacing:"0.3px",
         }}>
-          {typedText}
-          {!done && <span style={{color, animation:"dialogueCursor 0.5s step-start infinite"}}>▌</span>}
+          {latestPlain}
         </div>
       </div>
-      {/* Indicatore "tap per saltare" — solo durante animazione */}
-      {!done && (
-        <div style={{flexShrink:0, fontSize:"8px", color:color+"55", letterSpacing:"1px"}}>TAP▶</div>
-      )}
     </div>
   );
 }

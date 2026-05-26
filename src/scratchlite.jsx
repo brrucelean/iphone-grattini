@@ -3869,34 +3869,48 @@ export default function Grattini() {
 
       </div>{/* fine 3-column */}
 
-      {/* ── LOG STRIP (bottom) ── */}
-      {player && !["title","tutorialNails"].includes(screen) && log.length > 0 && (
-        <div style={{
-          width:"100%", flexShrink:0,
-          borderTop:"1px solid #12121e",
-          background:"#04040c",
-          padding:"4px 10px",
-          display:"flex", alignItems:"center", gap:"10px",
-          minHeight:"30px", maxHeight:"34px",
-          overflow:"hidden",
-        }}>
-          <div style={{color:C.dim, fontSize:"8px", letterSpacing:"1px", flexShrink:0, opacity:0.5}}>LOG</div>
+      {/* ── LOG STRIP (bottom) — ticker CSS dell'ultima voce ── */}
+      {player && !["title","tutorialNails"].includes(screen) && log.length > 0 && (() => {
+        const latest = log[log.length - 1];
+        const duration = Math.max(7, latest.text.length * 0.085);
+        return (
           <div style={{
-            flex:1, overflowX:"auto", overflowY:"hidden",
-            display:"flex", alignItems:"center", gap:"14px", whiteSpace:"nowrap",
-            scrollbarWidth:"none", msOverflowStyle:"none",
+            width:"100%", flexShrink:0,
+            borderTop:"1px solid #12121e",
+            background:"#04040c",
+            height:"30px",
+            display:"flex", alignItems:"stretch",
+            overflow:"hidden",
           }}>
-            {[...log.slice(-10)].reverse().map((l, i) => (
-              <span key={i} style={{
-                color: l.color || C.dim,
+            {/* Badge LOG */}
+            <div style={{
+              flexShrink:0,
+              padding:"0 8px",
+              display:"flex", alignItems:"center",
+              color:C.dim, fontSize:"8px", letterSpacing:"1px", opacity:0.5,
+              borderRight:"1px solid #12121e",
+            }}>LOG</div>
+            {/* Testo scorrevole */}
+            <div style={{
+              flex:1, position:"relative", overflow:"hidden",
+              maskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+              WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+            }}>
+              <div key={log.length} style={{
+                position:"absolute", left:"100%", top:0,
+                whiteSpace:"nowrap", lineHeight:"30px",
+                animation:`newsTicker ${duration}s linear forwards`,
+                willChange:"transform",
+                color: latest.color || C.dim,
                 fontSize:"10px",
-                opacity: i === 0 ? 1 : i === 1 ? 0.6 : 0.3,
-                flexShrink:0,
-              }}>{l.text}</span>
-            ))}
+                letterSpacing:"0.2px",
+              }}>
+                {latest.text}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
     </div>
