@@ -2015,7 +2015,7 @@ export default function Grattini() {
 
       {/* ═══ COMBAT ═══ */}
       {screen === "combat" && player && combatEnemy && (
-        <div style={{maxWidth:"900px", width:"100%"}}>
+        <div style={{flex:1, minHeight:0, width:"100%", maxWidth:"900px", display:"flex", flexDirection:"column", overflow:"hidden"}}>
           <CombatView
             enemy={combatEnemy}
             player={player}

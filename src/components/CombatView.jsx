@@ -1171,8 +1171,28 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
 
   const won = playerMoney > enemyMoney;
 
+  // Fase resolve/end: layout flex-colonna pieno per tenere il log sempre visibile
+  const isResolvingPhase = phase === "resolve" || phase === "end";
+
   return (
-    <div style={{...S.panel, maxWidth:"620px", margin:"10px auto", textAlign:"center"}}>
+    <div style={{
+      flex: isResolvingPhase ? 1 : "none",
+      minHeight: isResolvingPhase ? 0 : "auto",
+      display: "flex", flexDirection: "column",
+      overflow: isResolvingPhase ? "hidden" : "visible",
+      // Base panel styles (senza margin/maxWidth che forzano shrink)
+      fontFamily: S.panel.fontFamily || "inherit",
+      background: S.panel.background || C.card,
+      border: S.panel.border || `2px solid ${C.dim}`,
+      boxShadow: S.panel.boxShadow,
+      padding: isResolvingPhase ? "8px 12px 0" : S.panel.padding,
+      margin: isResolvingPhase ? "0" : "10px auto",
+      width: isResolvingPhase ? "100%" : S.panel.width,
+      maxWidth: isResolvingPhase ? "none" : "620px",
+      textAlign:"center",
+      boxSizing:"border-box",
+      position:"relative",
+    }}>
       {/* Flash rosso fullscreen danno unghia */}
       {painFlash > 0 && (
         <div style={{
@@ -1672,7 +1692,8 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
         const activeEnemyIdx  = curStep?.flipSide === "enemy"  ? curStep.flipIdx : -1;
 
         return (
-          <div>
+          // Layout flex-colonna: header + carte + score fissi in alto, log cresce a riempire, bottone in fondo
+          <div style={{flex:1, minHeight:0, display:"flex", flexDirection:"column"}}>
             {/* Header round risoluzione */}
             <div style={{
               display:"flex", alignItems:"center", justifyContent:"space-between",
@@ -1700,8 +1721,8 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               ) : <div style={{width:"60px"}} />}
             </div>
 
-            {/* Carte in parallelo: player sinistra, enemy destra */}
-            <div style={{display:"flex", gap:"8px", justifyContent:"center", marginBottom:"10px"}}>
+            {/* Carte in parallelo: player sinistra, enemy destra — flexShrink:0 per non comprimersi */}
+            <div style={{display:"flex", gap:"8px", justifyContent:"center", marginBottom:"8px", flexShrink:0}}>
               {/* Player cards */}
               <div style={{flex:1, maxWidth:"140px"}}>
                 <div style={{color:C.cyan, fontSize:"10px", marginBottom:"4px", textAlign:"center"}}>TU</div>
@@ -1794,10 +1815,11 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               </div>
             </div>
 
-            {/* Punteggio live */}
+            {/* Punteggio live — flexShrink:0 per non comprimersi */}
             <div style={{
+              flexShrink:0,
               display:"flex", justifyContent:"center", alignItems:"center", gap:"16px",
-              background:"#0a0a1a", borderRadius:"0", padding:"8px 10px", marginBottom:"10px",
+              background:"#0a0a1a", borderRadius:"0", padding:"6px 10px", marginBottom:"6px",
             }}>
               <div style={{textAlign:"center", minWidth:"130px"}}>
                 <div style={{color:C.cyan, fontSize:"9px", letterSpacing:"2px", marginBottom:"1px"}}>TU</div>
@@ -1854,16 +1876,17 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               </div>
             </div>
 
-            {/* Log botta e risposta — stile chat, auto-scroll al fondo */}
+            {/* Log botta e risposta — flex:1 riempie tutto lo spazio disponibile, newest sempre visibile */}
             <div ref={logScrollRef} style={{
-              marginBottom:"10px",
-              marginLeft:"-8px", marginRight:"-8px",
-              maxHeight:"260px", overflowY:"auto",
+              flex:1, minHeight:0,
+              marginBottom:"6px",
+              overflowY:"auto",
               background:"#050510", borderRadius:"0",
-              padding:"8px 12px",
+              padding:"6px 10px",
               border:`1px solid ${C.cyan}22`,
-              boxShadow:"inset 0 8px 12px -8px #000c, inset 0 -8px 12px -8px #000c",
+              boxShadow:"inset 0 6px 10px -6px #000c, inset 0 -6px 10px -6px #000c",
               scrollBehavior:"smooth",
+              WebkitOverflowScrolling:"touch",
             }}>
               {visibleEntries.map((entry, i) => {
                 const isPlayer = entry.text.startsWith("✅") || entry.text.startsWith("⚔️") ||
@@ -1897,11 +1920,12 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               )}
             </div>
 
-            {/* Banner unghia colpita — appare solo quando la reveal è finita */}
+            {/* Banner unghia colpita — flexShrink:0 per non comprimersi */}
             {allDone && nailHitThisRound > 0 && (
               <div style={{
+                flexShrink:0,
                 background:"#1a0000", border:`2px solid ${C.red}`,
-                borderRadius:"0", padding:"8px 12px", marginBottom:"10px",
+                borderRadius:"0", padding:"6px 10px", marginBottom:"6px",
                 animation:"pulse 0.8s infinite",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:"8px",
               }}>
@@ -1916,13 +1940,14 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               </div>
             )}
 
-            {/* Bottone continua — solo quando tutto risolto */}
+            {/* Bottone continua — flexShrink:0, sempre in fondo */}
             {allDone && (
               phase === "end" ? (
                 (() => {
                   const resultColor = won ? C.green : C.red;
                   return (
                     <div style={{
+                      flexShrink: 0,
                       textAlign: "center",
                       maxWidth: "420px", margin: "0 auto",
                       background: won
@@ -1930,7 +1955,7 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
                         : `linear-gradient(180deg, #180000 0%, #05050b 100%)`,
                       border: `2px solid ${resultColor}`,
                       boxShadow: `0 0 22px ${resultColor}66, inset 0 0 22px ${resultColor}14`,
-                      padding: "16px 18px",
+                      padding: "10px 14px 12px",
                       position: "relative",
                     }}>
                       {/* Sparkles ai lati (solo vittoria) */}
@@ -2022,7 +2047,7 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
                   );
                 })()
               ) : (
-                <div style={{textAlign:"center"}}>
+                <div style={{flexShrink:0, textAlign:"center", paddingBottom:"8px"}}>
                   <Btn onClick={nextRound} style={{fontSize:"13px"}}>
                     Prossimo round ({round + 1}/{maxRounds}) →
                   </Btn>
