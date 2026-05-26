@@ -118,6 +118,7 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
         margin:"4px 8px",
         boxShadow:`3px 3px 0 #000000`,
         fontFamily: "inherit",
+        overflow:"hidden",
       }}>
         {/* ── Riga principale ── */}
         <div style={{display:"flex", alignItems:"center", gap:"6px", padding:"5px 10px", minHeight:"34px"}}>
