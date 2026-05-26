@@ -1120,7 +1120,7 @@ export default function Grattini() {
                       border:`2px solid ${c ? borderColor : "#1a1a2e"}`,
                       background: c ? "#0a0a1a" : "#070710",
                       padding:"16px 20px",
-                      height:"130px",
+                      flex:"1 1 120px", minHeight:"120px",
                       display:"flex", alignItems:"center", gap:"24px",
                       overflow:"hidden",
                       transition:"border-color 0.15s",
@@ -1748,22 +1748,25 @@ export default function Grattini() {
             }}>
               {/* Section header */}
               <div style={{
-                display: "flex", alignItems: "center", gap: "10px",
+                display: "flex", alignItems: "center", gap: "8px",
                 borderBottom: `1px solid ${C.cyan}44`,
                 paddingBottom: "6px", marginBottom: "10px",
+                flexWrap: "nowrap", overflow: "hidden",
               }}>
                 <div style={{
+                  flexShrink: 0,
                   background: C.cyan, color: "#000",
-                  padding: "3px 10px", fontSize: "10px", fontWeight: "bold",
-                  letterSpacing: "2px",
+                  padding: "3px 8px", fontSize: "10px", fontWeight: "bold",
+                  letterSpacing: "1px", whiteSpace: "nowrap",
                   boxShadow: `0 0 8px ${C.cyan}88`,
                 }}>
-                  ★ 🔧 GRATTATORI ★
+                  🔧 GRATTATORI
                 </div>
-                <div style={{color: C.dim, fontSize: "10px", letterSpacing: "1px", fontStyle: "italic"}}>
-                  proteggono le unghie durante la grattata
+                <div style={{flex: 1, color: C.dim, fontSize: "10px", letterSpacing: "0.5px", fontStyle: "italic",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>
+                  proteggono le unghie
                 </div>
-                <div style={{marginLeft: "auto", color: C.cyan, fontSize: "10px", letterSpacing: "1px"}}>
+                <div style={{flexShrink: 0, color: C.cyan, fontSize: "10px", letterSpacing: "1px", whiteSpace: "nowrap"}}>
                   {player.grattatori.length} {player.grattatori.length === 1 ? "pezzo" : "pezzi"}
                 </div>
               </div>

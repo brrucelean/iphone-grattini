@@ -5,15 +5,10 @@ import { BIOMES, BIOME_MODIFIERS } from "../data/biomes.js";
 import { Tooltip } from "./Tooltip.jsx";
 
 // ─── COSTANTI LAYOUT ─────────────────────────────────────────────
-// Nodi fissi grandi → la mappa scrolla verticalmente invece di
-// comprimere tutto in viewport. Su iPhone i nodi sono toccabili.
-const ROW_H = 90;   // altezza per riga
-// NW/NH sono calcolati dinamicamente dentro MapView in base alla larghezza disponibile
-
+const ROW_H = 96;   // altezza per riga — leggermente più alta per leggibilità
 const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
 const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
 
-// Legenda (footer)
 const LEGEND = [
   { col:"#ff4444", label:"PERICOLO" },
   { col:"#ffdd00", label:"NEUTRO"   },
@@ -25,26 +20,24 @@ const LEGEND = [
 export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachableNodes, currentBiome = 0, playerFortuna = 0 }) {
   const scrollRef = useRef(null);
 
-  // Auto-scroll sulla riga corrente quando la mappa viene aperta o cambia riga
+  // Auto-scroll centrato sulla riga corrente — ogni volta che cambia currentRow o map
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const targetY = currentRow * ROW_H - el.clientHeight / 2 + ROW_H / 2;
+    // Centro: la riga corrente deve stare al centro dell'area visibile
+    const targetY = currentRow * ROW_H - (el.clientHeight / 2) + (ROW_H / 2);
     el.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-  }, [currentRow]);
+  }, [currentRow, map]);
 
   const rowsCount = map.rows.length || 1;
   const totalH    = rowsCount * ROW_H;
   const vw        = typeof window !== "undefined" ? window.innerWidth : 900;
   const W         = Math.min(860, vw - 16);
 
-  // NW dinamico — riduce la larghezza dei nodi quando ce ne sono tanti per riga,
-  // così non si sovrappongono su schermi stretti (es. iPhone con 5 nodi × 84px = 420px > 374px)
   const maxNodesPerRow = map.rows.reduce((acc, r) => Math.max(acc, r.length), 1);
   const NW = Math.min(84, Math.floor(W / Math.max(1, maxNodesPerRow)));
-  const NH = Math.round(NW * 66 / 84);  // mantieni proporzione 84:66
+  const NH = Math.round(NW * 66 / 84);
 
-  // Posizioni pixel nodi (centrate, con margine NW/2 ai bordi così non vengono tagliati)
   const nodePos = useMemo(() => {
     const pos = {};
     const usableW = Math.max(NW, W - NW);
@@ -59,7 +52,6 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
     return pos;
   }, [map, W, NW]);
 
-  // Edges con shortcut
   const edges = useMemo(() => {
     const list = [];
     Object.entries(map.connections).forEach(([fromId, toIds]) => {
@@ -73,10 +65,9 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
     return list;
   }, [map]);
 
-  // Colore linea
   const edgeColor = (toId, isActive, isPast, isShortcut) => {
-    if (isPast)    return C.gold;
-    if (!isActive) return "#1e1e2e";
+    if (isPast)    return "#cc9900";   // trail visitato — ambra scuro
+    if (!isActive) return "#1a1a2e";
     if (isShortcut) return C.magenta;
     const n = map.rows.flat().find(n => n.id === toId);
     if (!n) return `${C.gold}88`;
@@ -87,11 +78,9 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
     return `${C.gold}99`;
   };
 
-  // Info bioma
   const biomeColor = BIOMES[currentBiome]?.color || C.cyan;
   const biomeName  = BIOMES[currentBiome]?.name  || "Tabacchitalia Nord";
   const biomeBoss  = BIOMES[currentBiome]?.boss  || "Il Broker";
-  const biomeDesc  = BIOMES[currentBiome]?.desc  || "";
   const totalRows  = map.rows.length;
   const progressRow = Math.min(currentRow + 1, totalRows);
   const progressPct = (progressRow / totalRows) * 100;
@@ -108,7 +97,35 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
       flex:1, minHeight:0, overflow:"hidden",
     }}>
 
-      {/* ── HEADER COMPATTO — una sola riga ────────────────────── */}
+      {/* ── keyframes inline per animazioni mappa ── */}
+      <style>{`
+        @keyframes mapCurrentRowPulse {
+          0%,100% { background: ${biomeColor}18; box-shadow: inset 0 0 0 0 ${biomeColor}00; }
+          50%      { background: ${biomeColor}28; box-shadow: inset 0 2px 0 0 ${biomeColor}66, inset 0 -2px 0 0 ${biomeColor}66; }
+        }
+        @keyframes mapNodeReachable {
+          0%,100% { box-shadow: 0 0 10px currentColor; }
+          50%      { box-shadow: 0 0 22px currentColor, 0 0 6px currentColor; }
+        }
+        @keyframes mapYouAreHere {
+          0%,100% { opacity:1; transform:scale(1); }
+          50%      { opacity:0.5; transform:scale(1.3); }
+        }
+        @keyframes mapTrailFlow {
+          0%   { stroke-dashoffset: 24; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes bossGlow {
+          0%,100% { box-shadow: 0 0 24px #ff2244ee, 0 0 48px #ff224466, 3px 3px 0 #000; }
+          50%      { box-shadow: 0 0 36px #ff2244ff, 0 0 72px #ff224488, 3px 3px 0 #000; }
+        }
+        @keyframes slotGlow {
+          0%,100% { box-shadow: 0 0 8px #cc9900cc, 3px 3px 0 #000; }
+          50%      { box-shadow: 0 0 20px #ffcc00ee, 0 0 36px #ffcc0044, 3px 3px 0 #000; }
+        }
+      `}</style>
+
+      {/* ── HEADER COMPATTO ─────────────────────────────────────── */}
       <div style={{
         flexShrink:0,
         padding:"8px 12px",
@@ -116,13 +133,8 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
         borderBottom:`2px solid ${biomeColor}`,
         display:"flex", alignItems:"center", gap:"10px",
       }}>
-        {/* Icona bioma */}
-        <span style={{
-          fontSize:"24px", flexShrink:0,
-          filter:`drop-shadow(0 0 6px ${biomeColor})`,
-        }}>{biomeGlyph}</span>
+        <span style={{fontSize:"24px", flexShrink:0, filter:`drop-shadow(0 0 6px ${biomeColor})`}}>{biomeGlyph}</span>
 
-        {/* Nome bioma + boss */}
         <div style={{flex:1, minWidth:0}}>
           <div style={{
             display:"inline-block",
@@ -130,24 +142,19 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             fontFamily:FONT, fontWeight:"bold",
             fontSize:"7px", letterSpacing:"2px",
             padding:"1px 6px", marginBottom:"2px",
-          }}>
-            BIOMA {currentBiome + 1}/4
-          </div>
+          }}>BIOMA {currentBiome + 1}/4</div>
           <div style={{
             color: biomeColor, fontFamily:FONT, fontWeight:"bold",
             fontSize:"14px", letterSpacing:"2px",
             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
             textShadow:`0 0 10px ${biomeColor}99`,
-          }}>
-            {biomeName.toUpperCase()}
-          </div>
+          }}>{biomeName.toUpperCase()}</div>
           <div style={{display:"flex", alignItems:"center", gap:"5px", marginTop:"2px"}}>
             <span style={{
               background:C.red, color:"#fff",
               fontFamily:FONT, fontWeight:"bold",
               fontSize:"7px", letterSpacing:"1px",
-              padding:"1px 5px",
-              boxShadow:`0 0 5px ${C.red}aa`,
+              padding:"1px 5px", boxShadow:`0 0 5px ${C.red}aa`,
             }}>BOSS</span>
             <span style={{color:C.red, fontSize:"10px", fontFamily:FONT, fontWeight:"bold", letterSpacing:"0.5px"}}>
               {biomeBoss.toUpperCase()}
@@ -155,22 +162,13 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           </div>
         </div>
 
-        {/* Progress riga/boss */}
         <div style={{flexShrink:0, textAlign:"right"}}>
-          <div style={{
-            color:C.dim, fontSize:"9px", fontFamily:FONT,
-            letterSpacing:"1px", marginBottom:"4px",
-          }}>
+          <div style={{color:C.dim, fontSize:"9px", fontFamily:FONT, letterSpacing:"1px", marginBottom:"4px"}}>
             <span style={{color:biomeColor, fontWeight:"bold"}}>{progressRow}</span>
             <span style={{color:"#444"}}>/</span>
             <span>{totalRows}</span>
           </div>
-          <div style={{
-            width:"72px", height:"7px",
-            background:"#111",
-            border:`2px solid ${biomeColor}66`,
-            position:"relative",
-          }}>
+          <div style={{width:"72px", height:"7px", background:"#111", border:`2px solid ${biomeColor}66`, position:"relative"}}>
             <div style={{
               position:"absolute", inset:0,
               width:`${progressPct}%`,
@@ -179,20 +177,15 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
               transition:"width 0.5s",
             }}/>
           </div>
-          <div style={{
-            color:C.red, fontSize:"8px", fontFamily:FONT,
-            letterSpacing:"1px", marginTop:"2px",
-            textShadow:`0 0 4px ${C.red}99`,
-          }}>→ BOSS</div>
+          <div style={{color:C.red, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px", marginTop:"2px", textShadow:`0 0 4px ${C.red}99`}}>→ BOSS</div>
         </div>
       </div>
 
-      {/* Modificatore bioma — se presente, una strip sottile */}
+      {/* Modificatore bioma */}
       {BIOME_MODIFIERS[currentBiome] && (
         <div style={{
           flexShrink:0,
-          display:"flex", alignItems:"center", gap:"6px",
-          flexWrap:"wrap",
+          display:"flex", alignItems:"center", gap:"6px", flexWrap:"wrap",
           padding:"5px 12px",
           background:`${biomeColor}12`,
           borderBottom:`1px solid ${biomeColor}44`,
@@ -202,9 +195,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           <span style={{fontSize:"14px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
           <strong style={{letterSpacing:"1px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].label}</strong>
           <span style={{color: biomeColor+"66", flexShrink:0}}>—</span>
-          <span style={{color:"#c8c8c8", fontWeight:"normal"}}>
-            {BIOME_MODIFIERS[currentBiome].desc}
-          </span>
+          <span style={{color:"#c8c8c8", fontWeight:"normal"}}>{BIOME_MODIFIERS[currentBiome].desc}</span>
         </div>
       )}
 
@@ -225,17 +216,32 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           margin:"0 auto",
         }}>
 
-          {/* ── HIGHLIGHT RIGA CORRENTE ──────────────────────────── */}
+          {/* ── HIGHLIGHT RIGA CORRENTE (pulsante) ──────────────── */}
           <div style={{
             position:"absolute",
             left:0, right:0,
             top: currentRow * ROW_H,
             height: ROW_H,
-            background:`${biomeColor}10`,
-            borderTop:`1px solid ${biomeColor}55`,
-            borderBottom:`1px solid ${biomeColor}55`,
+            animation: "mapCurrentRowPulse 2s ease-in-out infinite",
+            borderTop:`2px solid ${biomeColor}88`,
+            borderBottom:`2px solid ${biomeColor}88`,
             pointerEvents:"none",
             zIndex:0,
+          }}/>
+
+          {/* ── "SEI QUI" indicatore triangolare sinistra ─────── */}
+          <div style={{
+            position:"absolute",
+            left: 0,
+            top: currentRow * ROW_H + ROW_H / 2 - 10,
+            width: 0, height: 0,
+            borderTop: "10px solid transparent",
+            borderBottom: "10px solid transparent",
+            borderLeft: `12px solid ${biomeColor}`,
+            filter: `drop-shadow(0 0 6px ${biomeColor})`,
+            pointerEvents:"none",
+            zIndex: 10,
+            animation: "mapYouAreHere 1.2s ease-in-out infinite",
           }}/>
 
           {/* ── GRIGLIA DI SFONDO ────────────────────────────────── */}
@@ -245,14 +251,18 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           >
             <defs>
               <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff05" strokeWidth="0.5"/>
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff04" strokeWidth="0.5"/>
               </pattern>
               <radialGradient id="biomeGlowMap" cx="50%" cy="40%" r="55%">
-                <stop offset="0%"   stopColor={biomeColor} stopOpacity="0.06"/>
+                <stop offset="0%"   stopColor={biomeColor} stopOpacity="0.05"/>
                 <stop offset="100%" stopColor={biomeColor} stopOpacity="0"/>
               </radialGradient>
               <filter id="lineglow" x="-50%" y="-20%" width="200%" height="140%">
-                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="trailglow" x="-50%" y="-20%" width="200%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
@@ -273,26 +283,48 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
               const isActive    = fromVisited && toReachable;
               const isPast      = fromVisited && visitedNodes.includes(toId);
 
+              // Edge non raggiungibile — linea fantasma tratteggiata
               if (!isActive && !isPast) return (
                 <line key={`${fromId}-${toId}`}
                   x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                  stroke="#aaaacc" strokeWidth="1.5" strokeOpacity="0.18"
-                  strokeDasharray="3 8" strokeLinecap="round"
+                  stroke="#aaaacc" strokeWidth="1" strokeOpacity="0.12"
+                  strokeDasharray="2 10" strokeLinecap="round"
                 />
               );
 
-              const sw   = isPast ? 4 : 3;
-              const dash = isPast ? "none" : isShortcut ? "5 6" : "7 5";
-              const col  = edgeColor(toId, isActive, isPast, isShortcut);
+              const col = edgeColor(toId, isActive, isPast, isShortcut);
 
-              if (isPast) return (
-                <line key={`${fromId}-${toId}`}
-                  x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                  stroke={col} strokeWidth={sw}
-                  strokeLinecap="round"
-                  filter="url(#lineglow)"
-                />
-              );
+              // Percorso già fatto — trail glow ambra con animazione
+              if (isPast) {
+                return (
+                  <g key={`${fromId}-${toId}`}>
+                    {/* Glow sottostante */}
+                    <line
+                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                      stroke={col} strokeWidth="6" strokeOpacity="0.25"
+                      strokeLinecap="round"
+                      filter="url(#trailglow)"
+                    />
+                    {/* Linea principale */}
+                    <line
+                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                      stroke={col} strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                    {/* Dot di avanzamento */}
+                    <line
+                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                      stroke="#ffee88" strokeWidth="1.5" strokeOpacity="0.5"
+                      strokeDasharray="3 18"
+                      strokeLinecap="round"
+                      style={{animation: "mapTrailFlow 1.5s linear infinite"}}
+                    />
+                  </g>
+                );
+              }
+
+              const sw   = 2.5;
+              const dash = isShortcut ? "5 6" : "6 5";
 
               if (isShortcut) {
                 const ctrl1x = from.cx - 50, ctrl1y = from.cy + 25;
@@ -309,7 +341,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                 <line key={`${fromId}-${toId}`}
                   x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
                   stroke={col} strokeWidth={sw} strokeDasharray={dash}
-                  strokeLinecap="round"
+                  strokeLinecap="round" filter="url(#lineglow)"
                 />
               );
             })}
@@ -332,43 +364,45 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             const dangerNode = DANGER_TYPES.has(node.type);
             const safeNode   = SAFE_TYPES.has(node.type);
 
-            // Bordo — più spesso se cliccabile
+            // Nodi visitati: bordo ambra scuro, sfondo carbonizzato
             const borderWidth = isBoss ? 3 : isElite || (isActive && secretUnlocked) ? 3 : isActive ? 2 : 1;
-            const borderCol   = visited             ? "#1a1a28"
-              : isBoss                              ? "#ff2244"
-              : isElite                             ? C.orange
-              : isActive && secretUnlocked          ? "#cc99ff"
-              : isActive && dangerNode              ? "#ff4444"
-              : isActive && safeNode                ? "#44dd88"
-              : isActive                            ? C.gold
-              : "#252538";
+            const borderCol = visited             ? "#3a3020"
+              : isBoss                            ? "#ff2244"
+              : isElite                           ? C.orange
+              : isActive && secretUnlocked        ? "#cc99ff"
+              : isActive && dangerNode            ? "#ff4444"
+              : isActive && safeNode              ? "#44dd88"
+              : isActive                          ? C.gold
+              : "#1e1e30";
 
-            // Sfondo — vivido per nodi attivi, quasi-nero altrimenti
-            const bgCol = visited                   ? "#0a0a0a"
-              : isBoss                              ? "#3a0000"
-              : isElite                             ? "#2a1800"
-              : isActive && secretUnlocked          ? "#200028"
-              : isActive && dangerNode              ? "#2e0000"
-              : isActive && safeNode                ? "#002e00"
-              : isActive                            ? "#0c0c30"
+            // Sfondo visitato: tono caldo scuro (ambra bruciata) invece di nero piatto
+            const bgCol = visited                  ? "#120e08"
+              : isBoss                             ? "#3a0000"
+              : isElite                            ? "#2a1800"
+              : isActive && secretUnlocked         ? "#200028"
+              : isActive && dangerNode             ? "#2e0000"
+              : isActive && safeNode               ? "#002e00"
+              : isActive                           ? "#0c0c30"
               : "#0a0a12";
 
-            const shadow = isActive
-              ? isBoss
-                ? `0 0 24px ${C.red}ee, 0 0 48px ${C.red}66, 3px 3px 0 #000`
-                : isElite
-                  ? `0 0 18px ${C.orange}dd, 3px 3px 0 #000`
-                  : secretUnlocked
-                    ? `0 0 18px #cc99ffdd, 3px 3px 0 #000`
-                    : dangerNode
-                      ? `0 0 16px #ff4444dd, 3px 3px 0 #000`
-                      : safeNode
-                        ? `0 0 16px #44dd88dd, 3px 3px 0 #000`
-                        : `0 0 16px ${C.gold}dd, 3px 3px 0 #000`
-              : "none";
+            const shadow = visited
+              ? "none"
+              : isActive
+                ? isBoss
+                  ? `0 0 24px ${C.red}ee, 0 0 48px ${C.red}66, 3px 3px 0 #000`
+                  : isElite
+                    ? `0 0 18px ${C.orange}dd, 3px 3px 0 #000`
+                    : secretUnlocked
+                      ? `0 0 18px #cc99ffdd, 3px 3px 0 #000`
+                      : dangerNode
+                        ? `0 0 16px #ff4444dd, 3px 3px 0 #000`
+                        : safeNode
+                          ? `0 0 16px #44dd88dd, 3px 3px 0 #000`
+                          : `0 0 16px ${C.gold}dd, 3px 3px 0 #000`
+                : "none";
 
             const animation = isBoss && isActive ? "bossGlow 1.8s infinite"
-              : isActive ? "slotGlow 2s infinite"
+              : isActive ? "slotGlow 2.4s ease-in-out infinite"
               : "none";
 
             const label = node.type === "boss"
@@ -382,14 +416,13 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
               : (isElite ? "★ ELITE — rischio e premi raddoppiati! " : "")
                 + (NODE_TOOLTIPS[node.type] || node.type);
 
-            // Etichetta nodo — tipo formattato
-            const labelColor = visited             ? C.dim
+            const labelColor = visited             ? "#3a3028"   // ambra scurissima per visitati
               : isBoss                             ? "#ff6688"
               : isActive && dangerNode             ? "#ff8888"
               : isActive && safeNode               ? "#88ffaa"
               : isActive && secretUnlocked         ? "#ddaaff"
               : isActive                           ? C.gold
-              : "#444460";
+              : "#2a2a3a";
 
             return (
               <Tooltip key={node.id} text={tooltip}>
@@ -404,34 +437,53 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     gap:"2px",
                     border: `${borderWidth}px solid ${borderCol}`,
                     background: bgCol,
-                    borderRadius:"0",
                     overflow:"hidden",
                     cursor: isActive && !effectivelyHidden ? "pointer" : "default",
-                    opacity: visited ? 0.35 : effectivelyHidden ? 0.5 : 1,
+                    // Visitati: opacità media (50%) così sono riconoscibili ma non ingombranti
+                    opacity: visited ? 0.52 : effectivelyHidden ? 0.5 : 1,
                     zIndex: isBoss ? 3 : isActive ? 2 : 1,
                     boxShadow: shadow,
-                    transition:"transform 0.1s, box-shadow 0.2s",
+                    transition:"transform 0.12s, box-shadow 0.2s",
                     animation,
                     userSelect:"none",
+                    // Visitati: diagonale "consumato"
+                    ...(visited ? {
+                      background: `repeating-linear-gradient(
+                        45deg,
+                        #120e08 0px, #120e08 6px,
+                        #0d0a06 6px, #0d0a06 12px
+                      )`,
+                    } : {}),
                   }}
-                  onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.08)"; }}
+                  onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.1)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; }}
-                  // Touch feedback
-                  onTouchStart={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.08)"; }}
+                  onTouchStart={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.1)"; }}
                   onTouchEnd={e   => { e.currentTarget.style.transform="scale(1)"; }}
                 >
-                  {/* Emoji icona — più grande */}
+                  {/* Overlay diagonale per visitati */}
+                  {visited && (
+                    <div style={{
+                      position:"absolute", inset:0,
+                      background:"linear-gradient(135deg, transparent 40%, rgba(0,0,0,0.4) 60%)",
+                      pointerEvents:"none",
+                    }}/>
+                  )}
+
+                  {/* Emoji icona */}
                   <span style={{
-                    fontSize: isBoss ? "28px" : "22px",
+                    fontSize: isBoss ? "26px" : "20px",
                     lineHeight:1,
-                    filter: isActive ? `drop-shadow(0 0 5px ${borderCol})` : "none",
+                    filter: visited
+                      ? "grayscale(0.8) brightness(0.5)"
+                      : isActive ? `drop-shadow(0 0 5px ${borderCol})` : "none",
+                    position:"relative", zIndex:1,
                   }}>
                     {icon}
                   </span>
 
-                  {/* Etichetta tipo — 2 righe max, font 7px per evitare troncatura su iOS */}
+                  {/* Etichetta tipo */}
                   <span style={{
-                    fontSize: isBoss ? "9px" : "7px",
+                    fontSize: isBoss ? "8px" : "7px",
                     color: labelColor,
                     fontFamily:FONT, fontWeight:"bold",
                     textAlign:"center", lineHeight:"1.2",
@@ -443,10 +495,22 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     wordBreak:"break-word",
                     WebkitTextSizeAdjust:"none",
                     textSizeAdjust:"none",
-                    textShadow: isActive ? `0 0 5px ${borderCol}` : "none",
+                    textShadow: isActive && !visited ? `0 0 5px ${borderCol}` : "none",
+                    position:"relative", zIndex:1,
                   }}>
                     {label.toUpperCase()}
                   </span>
+
+                  {/* ✓ checkmark per nodi visitati */}
+                  {visited && (
+                    <span style={{
+                      position:"absolute", inset:0,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:"22px", color:"#5a4820", opacity:0.6,
+                      pointerEvents:"none", zIndex:2,
+                      textShadow:"0 0 3px #000",
+                    }}>✓</span>
+                  )}
 
                   {/* Badge ELITE */}
                   {isElite && (
@@ -457,6 +521,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                       display:"flex", alignItems:"center", justifyContent:"center",
                       fontWeight:"bold",
                       boxShadow:`0 0 8px ${C.orange}cc`,
+                      zIndex:3,
                     }}>★</span>
                   )}
                 </div>
@@ -466,7 +531,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
         </div>
       </div>
 
-      {/* ── LEGENDA FOOTER — strip sottile ─────────────────────── */}
+      {/* ── LEGENDA FOOTER ──────────────────────────────────────── */}
       <div style={{
         flexShrink:0,
         display:"flex", alignItems:"center", gap:"10px",
@@ -480,11 +545,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             display:"flex", alignItems:"center", gap:"3px",
             color: col, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
           }}>
-            <span style={{
-              display:"inline-block", width:"7px", height:"7px",
-              background: col,
-              boxShadow:`0 0 4px ${col}`,
-            }}/>
+            <span style={{display:"inline-block", width:"7px", height:"7px", background: col, boxShadow:`0 0 4px ${col}`}}/>
             {label}
           </span>
         ))}
