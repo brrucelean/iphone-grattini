@@ -165,29 +165,31 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
     }}>
       <CornerBrackets color={color} size={13} inset={-3} thickness={2} glow />
       <div style={{
-        flexShrink:0, width:"160px", borderRight:`1px solid ${color}44`,
+        flexShrink:0, width:"110px", borderRight:`1px solid ${color}44`,
         background:`linear-gradient(180deg, ${color}08 0%, transparent 100%)`,
         display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-        padding:"12px 8px", overflow:"hidden",
+        padding:"10px 6px", overflow:"hidden",
       }}>
         <div style={{
           display:"inline-block", background: color, color:"#000",
-          fontSize:"8px", fontWeight:"bold", letterSpacing:"2.5px",
-          padding:"2px 7px", marginBottom:"10px",
+          fontSize:"7px", fontWeight:"bold", letterSpacing:"1.5px",
+          padding:"2px 5px", marginBottom:"8px",
           boxShadow:`0 0 8px ${color}aa`,
+          whiteSpace:"nowrap", maxWidth:"96px",
+          overflow:"hidden", textOverflow:"ellipsis",
         }}>★ {name.toUpperCase()} ★</div>
         {portrait && (
-          <pre style={{color:color+"cc", fontSize:"9.5px", lineHeight:"1.35", margin:0,
-            fontFamily:FONT, textShadow:`0 0 6px ${color}55`,
+          <pre style={{color:color+"cc", fontSize:"7px", lineHeight:"1.3", margin:0,
+            fontFamily:FONT, textShadow:`0 0 6px ${color}55`, overflow:"hidden",
           }}>{portrait.join("\n")}</pre>
         )}
       </div>
-      <div style={{flex:1, padding:"20px 24px", display:"flex", flexDirection:"column", minHeight:0}}>
-        <div style={{color, fontSize:"13px", fontWeight:"bold", letterSpacing:"3px",
-          marginBottom:"14px",
+      <div style={{flex:1, padding:"12px 14px", display:"flex", flexDirection:"column", minHeight:0}}>
+        <div style={{color, fontSize:"12px", fontWeight:"bold", letterSpacing:"1.5px",
+          marginBottom:"10px",
           textShadow:`0 0 10px ${color}, 0 0 18px ${color}55`,
-          borderBottom:`1px solid ${color}33`, paddingBottom:"8px", flexShrink:0,
-          fontFamily:FONT,
+          borderBottom:`1px solid ${color}33`, paddingBottom:"6px", flexShrink:0,
+          fontFamily:FONT, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
         }}>⬡ {name} ⬡</div>
         <div ref={scrollRef} style={{
           flex:1, overflowY:"auto", minHeight:0,

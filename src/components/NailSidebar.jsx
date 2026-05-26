@@ -78,7 +78,7 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               justifyContent: horizontal ? "center" : undefined,
               gap: horizontal ? "2px" : "6px",
               transition:"box-shadow 0.2s, border-color 0.2s",
-              ...(horizontal ? { minWidth:"64px", maxWidth:"64px", height:"68px", flexShrink:0 } : {}),
+              ...(horizontal ? { minWidth:"64px", maxWidth:"64px", height:"82px", flexShrink:0 } : {}),
             }}>
             {locked && !isActive && !isDead && (
               <div style={{
@@ -102,17 +102,33 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               }
               if (n.cremaHP > 0) tipLines.push(`🧴 Crema: ${n.cremaHP} colpi extra`);
               if (n.smalto > 0)  tipLines.push(`💅 Smalto: ${n.smalto} colpi`);
+              const stateLabel = isDead ? "MORTA"
+                : chirurgo ? chirurgo.label
+                : n.state === "sanguinante" ? "SANGUIN."
+                : n.state === "graffiata"   ? "GRAFFIAT"
+                : n.state === "polliceVerde" ? "🌿VERDE"
+                : n.state === "unghiaNera"   ? "🖤NERA"
+                : info.label.toUpperCase();
               return (
                 <Tooltip text={tipLines.join("\n")} color={col}>
-                  <span style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"3px", width:"100%"}}>
+                  <span style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"2px", width:"100%"}}>
                     {/* Emoji grande */}
                     <span style={{
-                      fontSize:"22px", lineHeight:1,
+                      fontSize:"20px", lineHeight:1,
                       filter: !isDead && visual?.glow && visual.glow !== "none"
                         ? `drop-shadow(0 0 5px ${col})` : "none",
                     }}>
                       {visual?.emoji || "🖐"}
                     </span>
+                    {/* Etichetta stato — visibile su touch dove il tooltip è disabilitato */}
+                    <span style={{
+                      color: isDead ? "#555" : col+"cc",
+                      fontSize:"6.5px", fontWeight:"bold",
+                      letterSpacing:"0.3px", lineHeight:1.1,
+                      maxWidth:"60px", overflow:"hidden",
+                      textOverflow:"ellipsis", whiteSpace:"nowrap",
+                      textAlign:"center",
+                    }}>{stateLabel}</span>
                     {/* HP tier pips */}
                     <span style={{display:"flex", gap:"1px", alignItems:"center"}}>
                       {TIER_ORDER.map((tier, ti) => {
