@@ -3,6 +3,7 @@ import { C, FONT } from "../data/theme.js";
 import { NPC_ART, SPR_BIG, SPR_COLOR, NPC_PALETTE, VECCHIO_DIALOGHI } from "../data/art.js";
 import { MACELLAIO_IMPLANTS, GRATTATORE_DEFS } from "../data/items.js";
 import { S } from "../utils/styles.js";
+import { normalizePortrait } from "../utils/nail.js";
 import { Btn } from "./Btn.jsx";
 import { Tooltip } from "./Tooltip.jsx";
 
@@ -490,7 +491,7 @@ export function EventView({ node, player, onChoice }) {
                       {"\n"}
                     </span>
                   ))
-                : bigArt.map((line, i) => {
+                : normalizePortrait(bigArt).map((line, i) => {
                     const t = blink && (i === 4 || i === 5) ? line.replace(/[•◕⊕∞☠><=;.]/g, "─") : line;
                     return <span key={i} style={{color:pal[0], textShadow:`0 0 6px ${pal[0]}44`}}>{t}{"\n"}</span>;
                   })

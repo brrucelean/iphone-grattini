@@ -3,6 +3,50 @@ import { CHIRURGO_IMPLANT_IDS } from "../data/items.js";
 
 export function nailStateIndex(state) { return NAIL_ORDER.indexOf(state); }
 
+// ─── ASCII PORTRAIT NORMALIZER ────────────────────────────────
+// Centers every line of an ASCII portrait within the max visual width.
+// Accounts for wide chars (CJK, emoji) that occupy 2 terminal columns.
+function _vw(ch) {
+  const cp = ch.codePointAt(0);
+  if (cp === undefined) return 1;
+  // CJK Unified / Extension A-F, CJK Compatibility, Hangul, wide symbols, emoji blocks
+  if (
+    (cp >= 0x1100  && cp <= 0x115F)  || // Hangul Jamo
+    (cp >= 0x2E80  && cp <= 0x303E)  || // CJK Radicals / Kangxi
+    (cp >= 0x3041  && cp <= 0x33FF)  || // Hiragana / Katakana / CJK
+    (cp >= 0x3400  && cp <= 0x4DBF)  || // CJK Extension A
+    (cp >= 0x4E00  && cp <= 0xA4CF)  || // CJK Unified
+    (cp >= 0xA960  && cp <= 0xA97F)  || // Hangul Jamo Extended-A
+    (cp >= 0xAC00  && cp <= 0xD7FF)  || // Hangul Syllables
+    (cp >= 0xF900  && cp <= 0xFAFF)  || // CJK Compatibility Ideographs
+    (cp >= 0xFE10  && cp <= 0xFE19)  || // Vertical Forms
+    (cp >= 0xFE30  && cp <= 0xFE6F)  || // CJK Compatibility Forms
+    (cp >= 0xFF01  && cp <= 0xFF60)  || // Fullwidth Latin
+    (cp >= 0xFFE0  && cp <= 0xFFE6)  || // Fullwidth Signs
+    (cp >= 0x1B000 && cp <= 0x1B0FF) || // Kana Supplement
+    (cp >= 0x1F004 && cp <= 0x1F0CF) || // Mahjong / playing cards
+    (cp >= 0x1F300 && cp <= 0x1FAFF) || // Misc Symbols / Emoji
+    (cp >= 0x20000 && cp <= 0x3FFFD)    // CJK Extension B-F
+  ) return 2;
+  return 1;
+}
+function _lineVW(line) {
+  return [...line].reduce((w, ch) => w + _vw(ch), 0);
+}
+export function normalizePortrait(lines) {
+  if (!lines || lines.length === 0) return lines;
+  const widths = lines.map(_lineVW);
+  const maxW = Math.max(...widths);
+  return lines.map((line, i) => {
+    const pad = maxW - widths[i];
+    if (pad <= 0) return line;
+    // distribute extra space: more on the left so art stays left-anchored when
+    // the delta is odd, but add at least half to the left to center-ish it.
+    const leftPad = Math.floor(pad / 2);
+    return ' '.repeat(leftPad) + line;
+  });
+}
+
 // True se l'unghia ha un impianto del chirurgo (plastica/ferro/oro) ancora attivo
 // — questi impianti NON sanguinano, non degradano, hanno slot fissi (implantUses).
 export function hasChirurgoImplant(nail) {

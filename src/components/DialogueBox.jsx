@@ -3,6 +3,7 @@ import { C, FONT } from "../data/theme.js";
 import { NPC_ART, SPR_BIG, SPR_COLOR } from "../data/art.js";
 import { AudioEngine } from "../audio.js";
 import { CornerBrackets } from "./Vintage.jsx";
+import { normalizePortrait } from "../utils/nail.js";
 
 export function DialogueBox({ npc, name, color, text, footer }) {
   const [displayed, setDisplayed] = useState("");
@@ -55,7 +56,7 @@ export function DialogueBox({ npc, name, color, text, footer }) {
             color: color+"cc", fontSize:"9.5px", lineHeight:"1.35", margin:0,
             fontFamily: FONT,
             textShadow:`0 0 6px ${color}55`,
-          }}>{portrait.join("\n")}</pre>
+          }}>{normalizePortrait(portrait).join("\n")}</pre>
         )}
         <div style={{
           marginTop:"6px", fontSize:"8px", color: color+"99",
@@ -179,7 +180,7 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
         {portrait && (
           <pre style={{color:color+"cc", fontSize:"7px", lineHeight:"1.3", margin:0,
             fontFamily:FONT, textShadow:`0 0 6px ${color}55`, overflow:"hidden",
-          }}>{portrait.join("\n")}</pre>
+          }}>{normalizePortrait(portrait).join("\n")}</pre>
         )}
       </div>
       <div style={{flex:1, padding:"12px 14px", display:"flex", flexDirection:"column", minHeight:0}}>
