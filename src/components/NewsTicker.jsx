@@ -37,10 +37,11 @@ export function NewsTicker({ currentBiome = 0 }) {
         maskImage:"linear-gradient(to right, transparent 0%, black 18%)",
       }}>
         <div key={key} style={{
-          position:"absolute", whiteSpace:"nowrap",
+          position:"absolute", left:"100%", top:0, whiteSpace:"nowrap",
           color: col, fontSize:"11px", fontWeight:"bold", lineHeight:"20px",
           textShadow:`0 0 8px ${col}88, 0 0 16px ${col}44`,
           animation: `newsTicker ${duration}s linear forwards`,
+          willChange:"transform",
           letterSpacing:"0.3px",
         }}>
           {pool[safeIdx]}
@@ -85,8 +86,9 @@ export function NpcCommentStrip({ comment, commentKey }) {
         WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)",
       }}>
         <div key={commentKey} style={{
-          position:"absolute", whiteSpace:"nowrap", top:0, lineHeight:"30px",
+          position:"absolute", left:"100%", top:0, whiteSpace:"nowrap", lineHeight:"30px",
           animation:`newsTicker ${duration}s linear forwards`,
+          willChange:"transform",
           color:C.gold+"bb", fontSize:"11px", fontStyle:"italic",
           textShadow:`0 0 8px ${C.gold}33`,
         }}>

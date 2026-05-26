@@ -446,7 +446,7 @@ export default function Grattini() {
         @keyframes achievementSlide { 0% { transform:translateX(120%); opacity:0; } 100% { transform:translateX(0); opacity:1; } }
         @keyframes nodePop { 0% { transform:scale(0.85); } 60% { transform:scale(1.05); } 100% { transform:scale(1); } }
         @keyframes lineFlow { 0% { stroke-dashoffset:20; } 100% { stroke-dashoffset:0; } }
-        @keyframes newsTicker { 0% { left: 100%; } 100% { left: -100%; } }
+        @keyframes newsTicker { 0% { transform: translateX(0); } 100% { transform: translateX(calc(-100% - 100vw)); } }
         @keyframes dialogueCursor { 0%,49% { opacity:1; } 50%,100% { opacity:0; } }
         @keyframes dialogueIn { 0% { opacity:0; transform:translateY(8px); } 100% { opacity:1; transform:translateY(0); } }
         @keyframes titleBlink { 0%,100% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } 48% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } 50% { text-shadow: 0 0 40px ${C.gold}, 0 0 80px ${C.gold}aa, 0 0 120px ${C.gold}55; opacity:0.7; } 52% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } }
@@ -585,28 +585,45 @@ export default function Grattini() {
                 {scratchingCard.emoji || "🎫"} {scratchingCard.name}
               </div>
             </div>
-            {/* Nail health dots */}
-            <div style={{display:"flex", gap:"5px", flexShrink:0, alignItems:"center"}}>
+            {/* Nail health indicators — più grandi e leggibili */}
+            <div style={{display:"flex", gap:"4px", flexShrink:0, alignItems:"center"}}>
               {player.nails.map((n, i) => {
                 const dotColor =
-                  n.state === "morta"        ? "#222"    :
-                  n.state === "marcia"       ? "#880000" :
-                  n.state === "sanguinante"  ? "#cc4400" :
-                  n.state === "graffiata"    ? "#885500" :
-                  n.state === "piede"        ? "#006688" :
+                  n.state === "morta"        ? "#1a1a1a"  :
+                  n.state === "marcia"       ? "#880000"  :
+                  n.state === "sanguinante"  ? "#cc3300"  :
+                  n.state === "graffiata"    ? "#886600"  :
+                  n.state === "piede"        ? "#006688"  :
                   C.green;
+                const isActive = i === player.activeNail;
+                const isDead   = n.state === "morta";
+                const emoji = isDead ? "✝" :
+                  n.state === "sanguinante" ? "🩸" :
+                  n.state === "marcia"      ? "💀" :
+                  n.state === "graffiata"   ? "⚡" : "🖐";
                 return (
                   <div key={i} style={{
-                    width:"10px", height:"14px",
-                    background: dotColor,
-                    border: i === player.activeNail
-                      ? `1px solid ${C.bright}`
-                      : `1px solid #333`,
-                    boxShadow: i === player.activeNail
-                      ? `0 0 6px ${dotColor}`
-                      : "none",
+                    display:"flex", flexDirection:"column", alignItems:"center", gap:"2px",
+                    width:"22px",
+                    opacity: isDead ? 0.35 : 1,
                     flexShrink:0,
-                  }} />
+                  }}>
+                    <div style={{
+                      width:"22px", height:"22px",
+                      background: dotColor+"33",
+                      border: isActive ? `2px solid ${dotColor}` : `1px solid ${dotColor}66`,
+                      boxShadow: isActive ? `0 0 8px ${dotColor}cc` : "none",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:"12px", lineHeight:1,
+                    }}>{emoji}</div>
+                    {isActive && (
+                      <div style={{
+                        width:"6px", height:"3px",
+                        background: dotColor,
+                        boxShadow:`0 0 4px ${dotColor}`,
+                      }}/>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -703,6 +720,19 @@ export default function Grattini() {
           padding:"8px 6px",
         }}>
           <NailSidebar nails={player.nails} activeNail={player.activeNail} onSelectNail={handleSelectNail} locked={!!scratchingCard} grattatori={player.grattatori||[]} equippedGrattatore={player.equippedGrattatore} onEquipGrattatore={equipGrattatore} horizontal={isMobile} />
+        </div>
+      )}
+
+      {/* ── NEWS STRIP MOBILE — striscia notizie sotto le unghie (mobile only) ── */}
+      {player && isMobile && !["title","tutorialNails"].includes(screen) && (
+        <div style={{
+          flexShrink:0, height:"22px",
+          display:"flex", alignItems:"stretch", overflow:"hidden",
+          background:"#030308",
+          borderBottom:"1px solid #0c0c1a",
+          paddingLeft:"6px", paddingRight:"6px",
+        }}>
+          <NewsTicker currentBiome={currentBiome} />
         </div>
       )}
 

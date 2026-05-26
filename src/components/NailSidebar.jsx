@@ -69,12 +69,16 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               border:`1px solid ${borderCol}`,
               background: sidebarBg,
               boxShadow: sidebarGlow,
-              padding:"5px 8px", borderRadius:"0",
+              padding: horizontal ? "5px 4px" : "5px 8px", borderRadius:"0",
               cursor: canSwitch ? "pointer" : "default",
               opacity: isDead ? 0.35 : 1,
-              display:"flex", alignItems:"center", gap:"6px",
+              display:"flex",
+              flexDirection: horizontal ? "column" : "row",
+              alignItems:"center",
+              justifyContent: horizontal ? "center" : undefined,
+              gap: horizontal ? "2px" : "6px",
               transition:"box-shadow 0.2s, border-color 0.2s",
-              ...(horizontal ? { minWidth:"122px", flexShrink:0 } : {}),
+              ...(horizontal ? { minWidth:"64px", maxWidth:"64px", height:"68px", flexShrink:0 } : {}),
             }}>
             {locked && !isActive && !isDead && (
               <div style={{
@@ -85,7 +89,58 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
                 fontSize:"13px",
               }}>🔒</div>
             )}
-            {(() => {
+
+            {/* ── LAYOUT COMPATTO ORIZZONTALE (mobile) ── */}
+            {horizontal && (() => {
+              const tipLines = [];
+              const chirurgo = !isDead && CHIRURGO_IMPLANT_IDS.has(n.implant) ? CHIRURGO_SLOTS[n.implant] : null;
+              if (chirurgo) {
+                tipLines.push(`${chirurgo.label} — ${n.implantUses}/${chirurgo.max} slot`);
+              } else {
+                tipLines.push(`${info.label} — x${(NAIL_INFO[n.state]?.mult||0).toFixed(1)} premio`);
+                tipLines.push(`HP: ${aliveTiers}/5 · ${3-dmgFilled}/3 grattate rimaste`);
+              }
+              if (n.cremaHP > 0) tipLines.push(`🧴 Crema: ${n.cremaHP} colpi extra`);
+              if (n.smalto > 0)  tipLines.push(`💅 Smalto: ${n.smalto} colpi`);
+              return (
+                <Tooltip text={tipLines.join("\n")} color={col}>
+                  <span style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"3px", width:"100%"}}>
+                    {/* Emoji grande */}
+                    <span style={{
+                      fontSize:"22px", lineHeight:1,
+                      filter: !isDead && visual?.glow && visual.glow !== "none"
+                        ? `drop-shadow(0 0 5px ${col})` : "none",
+                    }}>
+                      {visual?.emoji || "🖐"}
+                    </span>
+                    {/* HP tier pips */}
+                    <span style={{display:"flex", gap:"1px", alignItems:"center"}}>
+                      {TIER_ORDER.map((tier, ti) => {
+                        const filled = ti < aliveTiers;
+                        const isSmaltoPip = !filled && ti < aliveTiers + smaltoInTiers;
+                        if (isSmaltoPip) return <span key={ti} style={{display:"inline-block", width:"7px", height:"4px", background:C.pink, border:`1px solid ${C.pink}aa`, flexShrink:0}}/>;
+                        const pipCol = filled ? TIER_COLORS[tier] : "#222";
+                        return <span key={ti} style={{display:"inline-block", width:"7px", height:"4px", background: filled ? pipCol : "#111", border:`1px solid ${filled ? pipCol+"aa" : "#2a2a2a"}`, flexShrink:0}}/>;
+                      })}
+                    </span>
+                    {/* Scratch damage ticks */}
+                    {!isDead && (
+                      <span style={{display:"flex", gap:"1px", alignItems:"center"}}>
+                        {[0,1,2].map(t => {
+                          const rem = 3 - dmgFilled;
+                          return <span key={t} style={{display:"inline-block", width:"7px", height:"2px", background: t < rem ? col+"cc" : "#111", border:`1px solid ${t < rem ? col+"55" : "#222"}`, flexShrink:0}}/>;
+                        })}
+                      </span>
+                    )}
+                    {/* Indicatore nail attiva */}
+                    {isActive && <span style={{color:col, fontSize:"7px", fontWeight:"bold", letterSpacing:"0.5px"}}>●</span>}
+                  </span>
+                </Tooltip>
+              );
+            })()}
+
+            {/* ── LAYOUT COMPLETO VERTICALE (desktop/sidebar) ── */}
+            {!horizontal && (() => {
               const chirurgo = !isDead && CHIRURGO_IMPLANT_IDS.has(n.implant) ? CHIRURGO_SLOTS[n.implant] : null;
               const tipLines = [];
               if (chirurgo) {

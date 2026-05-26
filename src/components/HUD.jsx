@@ -45,14 +45,160 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
     window.addEventListener("resize", onR);
     return () => window.removeEventListener("resize", onR);
   }, []);
-  const compact = vw < 900;   // sotto 900px nascondi ticker
-  const ultraCompact = vw < 700; // sotto 700px restringe il volume slider
+  const compact = vw < 900;   // sotto 900px nascondi ticker nel panel
+  const mobile  = vw < 600;   // mobile: layout single-row compatto
   const handleVol = (e) => {
     const v = parseFloat(e.target.value);
     setVol(v);
     AudioEngine.setVolume(v);
   };
   const muted = vol === 0;
+
+  // ── STATUS CHIPS — usati sia in desktop che mobile ──
+  const ownedCards = player.scratchCards.filter(c => c.owned).length;
+  const viteColor = aliveNails <= 1 ? C.red : aliveNails <= 2 ? C.orange : C.green;
+
+  const statusChips = (
+    <>
+      {player.items.includes("cappelloSbirro") && (
+        <Tooltip text={player.cappelloSbirroWorn ? "🎩 INDOSSATO — clicca per toglierlo." : "🎩 In borsa — non ti protegge! Clicca per indossarlo."}>
+          <StatusChip color={player.cappelloSbirroWorn ? C.gold : C.dim} active={player.cappelloSbirroWorn} onClick={onOpenInventory}>
+            🎩{player.cappelloSbirroWorn ? "▲" : "▼"}
+          </StatusChip>
+        </Tooltip>
+      )}
+      {player.clipViraleActive && (
+        <Tooltip text="🎬 CLIP VIRALE ATTIVA! Prossima vincita x2!">
+          <StatusChip color={C.gold} active pulse pulseSpeed="1s">🎬 x2</StatusChip>
+        </Tooltip>
+      )}
+      {player.equippedGrattatore && (
+        <Tooltip text={`${player.equippedGrattatore.name} — ${player.equippedGrattatore.usesLeft} usi`}>
+          <StatusChip color={C.cyan}>{player.equippedGrattatore.emoji} <b>{player.equippedGrattatore.usesLeft}</b></StatusChip>
+        </Tooltip>
+      )}
+      {player.fortune > 0 && (
+        <Tooltip text={`🍀 FORTUNA +${player.fortune} — ${player.fortuneTurns} turni rimasti`}>
+          <StatusChip color={C.green} active>🍀 +{player.fortune}<span style={{fontSize:"8px", opacity:0.65, marginLeft:"2px"}}>({player.fortuneTurns}t)</span></StatusChip>
+        </Tooltip>
+      )}
+      {player.tumore && (
+        <Tooltip text="💀 TUMORE AI POLMONI — -5 Fortuna permanente.">
+          <StatusChip color={C.red} danger pulse pulseSpeed="1.5s">💀 −5F</StatusChip>
+        </Tooltip>
+      )}
+      {player.skills?.includes("ambidestri") && (
+        <StatusChip color={C.magenta} active>🙌</StatusChip>
+      )}
+      {player.grattaMania && (
+        <Tooltip text="⚡ GRATTAMANIA — Premi x2 MA ogni grattata fa danni!">
+          <StatusChip color={C.red} danger pulse pulseSpeed="0.6s">⚡☠</StatusChip>
+        </Tooltip>
+      )}
+      {player.relics?.length > 0 && player.relics.map((r, i) => (
+        <Tooltip key={i} text={`${r.emoji} ${r.name} — ${r.desc}`}>
+          <StatusChip color={C.magenta} active>{r.emoji}</StatusChip>
+        </Tooltip>
+      ))}
+    </>
+  );
+
+  const hasStatusChips = player.items.includes("cappelloSbirro") || player.clipViraleActive
+    || player.equippedGrattatore || player.fortune > 0 || player.tumore
+    || player.skills?.includes("ambidestri") || player.grattaMania || player.relics?.length > 0;
+
+  // ── MOBILE HUD: riga singola pulita ─────────────────────────────
+  if (mobile) {
+    const tot = (player?.items?.length||0) + (player?.grattatori?.length||0);
+    return (
+      <div style={{
+        display:"flex", flexDirection:"column",
+        background:"#0a0a18",
+        border:`2px solid ${C.dim}`,
+        margin:"4px 8px",
+        boxShadow:`3px 3px 0 #000000`,
+        fontFamily: "inherit",
+      }}>
+        {/* ── Riga principale ── */}
+        <div style={{display:"flex", alignItems:"center", gap:"6px", padding:"5px 10px", minHeight:"34px"}}>
+          {/* Soldi */}
+          <span key={moneyBling} style={{
+            display:"inline-flex", alignItems:"center", gap:"3px",
+            background:`linear-gradient(180deg,${C.gold}22,${C.gold}08)`,
+            border:`2px solid ${C.gold}cc`,
+            color:C.gold, fontWeight:"bold", fontSize:"13px",
+            padding:"1px 6px",
+            boxShadow:`0 0 6px ${C.gold}44`,
+            animation: moneyBling > 0 ? "moneyBling 0.6s ease-out" : "none",
+            cursor:"default", flexShrink:0,
+          }}>💰 €{fmtMoney(player.money)}</span>
+          {/* Grattini */}
+          <span style={{
+            display:"inline-flex", alignItems:"center", gap:"2px",
+            color:C.cyan, fontSize:"12px",
+            border:`2px solid ${C.cyan}88`,
+            padding:"1px 5px", flexShrink:0,
+          }}>🎫<b>{ownedCards}</b></span>
+          {/* Spacer */}
+          <span style={{flex:1}} />
+          {/* VITE pips compatti */}
+          <span style={{
+            display:"inline-flex", alignItems:"center", gap:"4px",
+            border:`1px solid ${viteColor}88`,
+            padding:"2px 6px", flexShrink:0,
+            background: aliveNails <= 1 ? "#1a0005" : "transparent",
+            animation: aliveNails <= 1 ? "pulse 1s infinite" : "none",
+          }}>
+            <span style={{display:"inline-flex", gap:"2px"}}>
+              {[0,1,2,3,4].map(i => {
+                const filled = i < aliveNails;
+                return (
+                  <span key={i} style={{
+                    display:"inline-block", width:"7px", height:"11px",
+                    background: filled ? viteColor : "#111",
+                    border:`2px solid ${filled ? viteColor+"ee" : "#333344"}`,
+                    boxShadow: filled ? `0 0 4px ${viteColor}88` : "none",
+                  }}/>
+                );
+              })}
+            </span>
+            <span style={{color:viteColor, fontSize:"10px", fontWeight:"bold"}}>{aliveNails}/5</span>
+          </span>
+          {/* Volume icona (no slider) */}
+          <span
+            style={{cursor:"pointer", fontSize:"16px", userSelect:"none", flexShrink:0}}
+            onClick={() => { const v = muted ? 0.7 : 0; setVol(v); AudioEngine.setVolume(v); }}
+          >{muted ? "🔇" : "🔊"}</span>
+          {/* Inventario */}
+          {onOpenInventory && (
+            <span
+              onClick={onOpenInventory}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:"2px",
+                color: inventoryOpen || tot > 0 ? C.magenta : C.dim,
+                border:`2px solid ${inventoryOpen || tot > 0 ? C.magenta : C.dim}88`,
+                padding:"1px 5px", fontSize:"12px",
+                background: inventoryOpen ? `${C.magenta}18` : "transparent",
+                cursor:"pointer", flexShrink:0,
+              }}
+            >🎒<b style={{fontSize:"11px"}}>{tot}</b></span>
+          )}
+        </div>
+        {/* ── Status chips: riga aggiuntiva solo se ci sono effetti attivi ── */}
+        {hasStatusChips && (
+          <div style={{
+            display:"flex", alignItems:"center", flexWrap:"wrap", gap:"4px",
+            padding:"3px 10px 5px",
+            borderTop:`1px solid ${C.dim}33`,
+          }}>
+            {statusChips}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── DESKTOP HUD: layout completo ────────────────────────────────
   // Divider Vintage fra gruppi del HUD
   const Sep = () => (
     <span style={{color:C.dim+"66", fontSize:"10px", userSelect:"none", margin:"0 2px"}}>│</span>
@@ -106,80 +252,11 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
             border:`2px solid ${C.cyan}88`,
             padding:"2px 7px",
             boxShadow:`inset 0 0 6px ${C.cyan}18`,
-          }}>🎫 <b>{player.scratchCards.filter(c => c.owned).length}</b></span>
+          }}>🎫 <b>{ownedCards}</b></span>
         </Tooltip>
       </div>
-      {/* ── STATUS CHIPS: pill style uniforme via StatusChip ── */}
-      {player.items.includes("cappelloSbirro") && (
-        <Tooltip text={
-          player.cappelloSbirroWorn
-            ? "🎩 INDOSSATO — poliziotto ti saluta, spacciatore SCAPPA! Clicca per toglierlo."
-            : "🎩 In borsa — non ti protegge! Clicca per indossarlo."
-        }>
-          <StatusChip
-            color={player.cappelloSbirroWorn ? C.gold : C.dim}
-            active={player.cappelloSbirroWorn}
-            onClick={onOpenInventory}
-          >
-            🎩{player.cappelloSbirroWorn ? "▲ ON" : "▼ off"}
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.clipViraleActive && (
-        <Tooltip text="🎬 CLIP VIRALE ATTIVA! La prossima vincita sarà RIPRESA e x2!">
-          <StatusChip color={C.gold} active pulse pulseSpeed="1s">
-            🎬 x2
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.equippedGrattatore && (
-        <Tooltip text={`${player.equippedGrattatore.name} equipaggiato — ancora ${player.equippedGrattatore.usesLeft} usi rimasti!`}>
-          <StatusChip color={C.cyan}>
-            {player.equippedGrattatore.emoji} <b>{player.equippedGrattatore.usesLeft}</b>
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.fortune > 0 && (() => {
-        const effective = Math.min(player.fortune, 5);
-        const bonus = effective * 6;
-        const capped = player.fortune > 5;
-        return (
-          <Tooltip text={`🍀 FORTUNA +${player.fortune} — +${bonus}% probabilità vincita${capped ? " (cap a +5)" : ""} · ${player.fortuneTurns} turni rimasti`}>
-            <StatusChip color={C.green} active>
-              🍀 +{player.fortune}
-              <span style={{fontSize:"8px", opacity:0.65, marginLeft:"2px"}}>({player.fortuneTurns}t)</span>
-            </StatusChip>
-          </Tooltip>
-        );
-      })()}
-      {player.tumore && (
-        <Tooltip text={`💀 TUMORE AI POLMONI — -5 Fortuna permanente. Troppo fumo.`}>
-          <StatusChip color={C.red} danger pulse pulseSpeed="1.5s">
-            💀 −5F
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.skills?.includes("ambidestri") && (
-        <Tooltip text={`🙌 DOPPIA MANO — seconda mano con 5 dita arancioni (meno allenate)`}>
-          <StatusChip color={C.magenta} active>
-            🙌 DOPPIA
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.grattaMania && (
-        <Tooltip text={`⚡ GRATTAMANIA ATTIVA — Premi x2 su tutto! MA ogni cella grattata danneggia 1 unghia random!`}>
-          <StatusChip color={C.red} danger pulse pulseSpeed="0.6s">
-            ⚡ GRATTAMANIA ☠
-          </StatusChip>
-        </Tooltip>
-      )}
-      {player.relics?.length > 0 && player.relics.map((r, i) => (
-        <Tooltip key={i} text={`${r.emoji} ${r.name}\n${r.desc}\n(Reliquia permanente)`}>
-          <StatusChip color={C.magenta} active>
-            {r.emoji}
-          </StatusChip>
-        </Tooltip>
-      ))}
+      {/* ── STATUS CHIPS ── */}
+      {statusChips}
       {/* ── CENTRO: news ticker (nascosto quando lo spazio manca) ── */}
       {!compact && <NewsTicker currentBiome={currentBiome} />}
       {/* ── DESTRA: vite + volume ── */}
@@ -187,31 +264,27 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
         <Tooltip text={`💀 unghie ancora vive su 5 — se arrivano a 0 sei MORTO poverino`}>
           <span style={{
             display:"inline-flex", alignItems:"center", gap:"5px",
-            border:`1px solid ${aliveNails <= 1 ? C.red : aliveNails <= 2 ? C.orange : C.green}88`,
+            border:`1px solid ${viteColor}88`,
             padding:"2px 7px", cursor:"default",
             background: aliveNails <= 1 ? "#1a0005" : "transparent",
             boxShadow: aliveNails <= 1 ? `0 0 6px ${C.red}66, inset 0 0 4px ${C.red}22` : "none",
             animation: aliveNails <= 1 ? "pulse 1s infinite" : "none",
           }}>
             <span style={{color:C.dim, fontSize:"9px", letterSpacing:"1px"}}>VITE</span>
-            {/* Pip bar */}
             <span style={{display:"inline-flex", gap:"2px"}}>
               {[0,1,2,3,4].map(i => {
                 const filled = i < aliveNails;
-                const col = aliveNails <= 1 ? C.red : aliveNails <= 2 ? C.orange : C.green;
                 return (
                   <span key={i} style={{
                     display:"inline-block", width:"8px", height:"12px",
-                    background: filled ? col : "#111",
-                    border: `2px solid ${filled ? col+"ee" : "#333344"}`,
-                    boxShadow: filled ? `0 0 6px ${col}99, 0 0 12px ${col}44` : "none",
+                    background: filled ? viteColor : "#111",
+                    border: `2px solid ${filled ? viteColor+"ee" : "#333344"}`,
+                    boxShadow: filled ? `0 0 6px ${viteColor}99, 0 0 12px ${viteColor}44` : "none",
                   }}/>
                 );
               })}
             </span>
-            <span style={{color: aliveNails <= 1 ? C.red : aliveNails <= 2 ? C.orange : C.green, fontSize:"10px", fontWeight:"bold"}}>
-              {aliveNails}/5
-            </span>
+            <span style={{color:viteColor, fontSize:"10px", fontWeight:"bold"}}>{aliveNails}/5</span>
           </span>
         </Tooltip>
         <Tooltip text={`🔊 volume musicale — alzalo e GODITI l'8-bit bro`}>
@@ -224,7 +297,7 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
               type="range" min="0" max="1" step="0.05" value={vol}
               onChange={handleVol}
               style={{
-                width: ultraCompact ? "36px" : "60px", height:"4px", cursor:"pointer", accentColor: C.gold,
+                width: compact ? "36px" : "60px", height:"4px", cursor:"pointer", accentColor: C.gold,
                 background:"transparent",
               }}
             />
