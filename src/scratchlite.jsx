@@ -402,16 +402,19 @@ export default function Grattini() {
   const { isMobile } = useIsMobile();
 
   return (
-    /* position:absolute inset:0 su html/body overflow:hidden è l'unico modo
-       affidabile su iOS Safari — non usa vh che è sbagliato con la barra URL */
+    /* position:fixed inset:0 — l'unico modo 100% affidabile su iOS Safari:
+       non usa vh (sballato con URL bar), non usa height:100% in un flex-row
+       (non risolve il % quando alignItems≠stretch), non usa absolute (può
+       avere il containing block sbagliato se un ancestor ha transform).
+       Il wrapper è un semplice blocco: niente flex, niente centering — così
+       S.container con height:100% risolve senza ambiguità. */
     <div style={{
-      position:"absolute", inset:0,
+      position:"fixed", inset:0,
       background: bioPal.bg,
-      display:"flex", alignItems:"center", justifyContent:"center",
       overflow:"hidden",
     }}>
     {/* ── FRAME FLUIDO — riempie tutto il viewport, layout responsive ── */}
-    {/* paddingTop/Bottom con env() perché position:absolute;inset:0 ignora il padding di #root */}
+    {/* paddingTop/Bottom con env() per Dynamic Island e home bar */}
     <div style={{...S.container, cursor: globalNailCursor,
       width: "100%",
       height: "100%",
