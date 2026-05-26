@@ -218,7 +218,7 @@ export function useEventHandlers({
           const newGrat = { id: gratId, name: def.name, emoji: def.emoji, effect: def.effect, value: def.value, usesLeft: def.maxUses };
           updatePlayer(p => ({...p, grattatori: [...p.grattatori, newGrat]}));
           addLog(`Hai trovato un grattatore: ${def.emoji} ${def.name}!`, C.cyan);
-          setItemFoundModal({ emoji: def.emoji, name: def.name, desc: def.desc, subtitle: "Grattatore trovato" });
+          setItemFoundModal({ emoji: def.emoji, name: def.name, desc: def.desc, subtitle: "Grattatore trovato", rarity: def.rarity });
           setScreen("map");
         } else {
           const loot = pick(["cerotto","disinfettante","sigaretta","cremaRinforzante"]);
@@ -236,6 +236,7 @@ export function useEventHandlers({
             emoji: lootDef.emoji, name: lootDef.name,
             desc: lootDef.desc + (bonusLine ? `\n${bonusLine}` : ""),
             subtitle: "Trovato nello zaino",
+            rarity: lootDef.rarity,
           });
           setScreen("map");
         }
@@ -534,6 +535,7 @@ export function useEventHandlers({
           desc:"La tua unghia attiva è diventata SACRA.\nLa prossima grattata = vincita GARANTITA × 3.\nDopo, torna Sana.",
           subtitle:"Benedizione dell'Anziana",
           buttonLabel:"Grazie nonna 🙏",
+          rarity:"rarissima",
         });
         break;
       }
@@ -764,7 +766,7 @@ export function useEventHandlers({
             return {...p, money: p.money - impl.cost, nails};
           });
           addLog(`${impl.emoji} Impianto "${impl.name}" installato sull'unghia attiva! ${impl.uses} usi garantiti.`, C.cyan);
-          setItemFoundModal({ emoji: impl.emoji, name: impl.name, desc: impl.desc, subtitle:"Chirurgo Macellaio" });
+          setItemFoundModal({ emoji: impl.emoji, name: impl.name, desc: impl.desc, subtitle:"Chirurgo Macellaio", rarity: impl.rarity });
         }
         setScreen("map"); break;
       }

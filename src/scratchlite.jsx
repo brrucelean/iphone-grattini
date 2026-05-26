@@ -462,6 +462,8 @@ export default function Grattini() {
         @keyframes foilShine { 0% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
         @keyframes foilHue { 0%,100% { filter: hue-rotate(0deg) saturate(1); } 50% { filter: hue-rotate(18deg) saturate(1.3); } }
         @keyframes asciiFlicker { 0%,100% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } 47% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } 48% { text-shadow: 0 0 2px currentColor, 0 0 6px currentColor44; } 52% { text-shadow: 0 0 2px currentColor, 0 0 6px currentColor44; } 53% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } }
+        @keyframes itemFoundIn { 0% { transform:scale(0.8); opacity:0; } 55% { transform:scale(1.04); } 100% { transform:scale(1); opacity:1; } }
+        @keyframes itemGlowRing { 0%,100% { opacity:0.55; transform:scale(0.94); } 50% { opacity:1; transform:scale(1.08); } }
         /* .foil-ascii::after rimosso — il shimmer diagonale con mix-blend-mode:screen
            creava un "contorno brillante" deformato sulle lettere box-drawing del titolo.
            Il class resta no-op per back-compat; il titolo ora si affida solo al gold
@@ -2845,52 +2847,132 @@ export default function Grattini() {
       )}
 
       {/* ═══ ITEM FOUND MODAL ═══ */}
-      {itemFoundModal && (
-        <div style={{
-          position:"fixed", inset:0,
-          background:"rgba(0,0,0,0.82)", zIndex:99998,
-          display:"flex", alignItems:"center", justifyContent:"center",
-        }}>
+      {itemFoundModal && (() => {
+        const IFM_RARITY = {
+          comune:     { c:"#7a8aaa", label:"COMUNE" },
+          media:      { c:"#00cccc", label:"MEDIA" },
+          rara:       { c:"#cc66ff", label:"RARA" },
+          epica:      { c:C.orange,  label:"EPICA" },
+          rarissimo:  { c:C.gold,    label:"RARISSIMO" },
+          rarissima:  { c:C.gold,    label:"RARISSIMA" },
+          leggendaria:{ c:C.gold,    label:"LEGGEND." },
+        };
+        const rar = IFM_RARITY[itemFoundModal.rarity] || null;
+        const em = itemFoundModal.emoji || "✦";
+        const sub = (itemFoundModal.subtitle || "").toLowerCase();
+        const nm  = (itemFoundModal.name    || "").toLowerCase();
+        const isDanger = ["💀","🩸","🚫"].some(e => em.includes(e))
+          || nm.match(/fallita|maledizione|gelosia|negato|perdita|maledett/);
+        const isWin = ["🏆","⚡","🌍"].some(e => em.includes(e))
+          || sub.match(/vittoria|sbloccato/);
+        const accent = rar ? rar.c
+          : isDanger ? "#ff3355"
+          : isWin    ? C.green
+          : sub.includes("reliquia")  ? C.gold
+          : sub.includes("grattatore")? C.cyan
+          : sub.includes("chirurgo")  ? "#00cccc"
+          : sub.includes("macellaio") ? "#ff6600"
+          : sub.includes("collezion") ? "#ffcc00"
+          : sub.includes("evento")    ? "#cc99ff"
+          : C.gold;
+        const descLines = (itemFoundModal.desc || "").split("\n");
+        return (
           <div style={{
-            background:C.card, border:`2px solid ${C.gold}`,
-            borderRadius:"0", padding:"32px 40px",
-            textAlign:"center", maxWidth:"340px", width:"90%",
-            boxShadow:`0 0 34px ${C.gold}66, inset 0 0 30px ${C.gold}14`,
-            fontFamily:FONT,
+            position:"fixed", inset:0,
+            background:"rgba(0,0,0,0.91)", zIndex:99998,
+            display:"flex", alignItems:"center", justifyContent:"center",
           }}>
-            <div style={{color:C.gold, fontSize:"11px", letterSpacing:"3px", marginBottom:"6px"}}>
-              ✦ HAI TROVATO ✦
-            </div>
-            {itemFoundModal.subtitle && (
-              <div style={{color:C.dim, fontSize:"10px", marginBottom:"10px", letterSpacing:"2px"}}>
-                {itemFoundModal.subtitle.toUpperCase()}
+            {/* Backdrop glow */}
+            <div style={{
+              position:"absolute", inset:0, pointerEvents:"none",
+              background:`radial-gradient(ellipse 70% 55% at 50% 50%, ${accent}1a 0%, ${accent}07 45%, transparent 70%)`,
+            }}/>
+            <div style={{
+              background:"linear-gradient(180deg,#08081c 0%,#040410 100%)",
+              border:`2px solid ${accent}`,
+              maxWidth:"320px", width:"92%",
+              boxShadow:`0 0 50px ${accent}44, 0 0 90px ${accent}18, inset 0 0 18px ${accent}0a`,
+              fontFamily:FONT, position:"relative", overflow:"hidden",
+              animation:"itemFoundIn 0.25s cubic-bezier(0.22,1,0.36,1)",
+            }}>
+              {/* Top shimmer line */}
+              <div style={{height:"2px", background:`linear-gradient(90deg,transparent,${accent}55,${accent}bb,${accent}55,transparent)`}}/>
+
+              {/* Header */}
+              <div style={{padding:"10px 14px 0", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", flexWrap:"wrap"}}>
+                <div style={{color:accent, fontSize:"10px", letterSpacing:"3px", fontWeight:"bold", textShadow:`0 0 10px ${accent}`}}>
+                  {itemFoundModal.subtitle ? `✦ ${itemFoundModal.subtitle.toUpperCase()} ✦` : "✦ HAI TROVATO ✦"}
+                </div>
+                {rar && (
+                  <div style={{background:`${accent}22`, border:`1px solid ${accent}66`, color:accent, fontSize:"8px", letterSpacing:"1.5px", padding:"2px 6px", fontWeight:"bold"}}>
+                    {rar.label}
+                  </div>
+                )}
               </div>
-            )}
-            <div style={{fontSize:"48px", margin:"8px 0 12px"}}>{itemFoundModal.emoji}</div>
-            <div style={{color:C.bright, fontWeight:"bold", fontSize:"18px", marginBottom:"10px"}}>
-              {itemFoundModal.name}
-            </div>
-            <div style={{color:C.text, fontSize:"12px", lineHeight:"1.8", marginBottom:"22px", whiteSpace:"pre-line"}}>
-              {itemFoundModal.desc}
-            </div>
-            {itemFoundModal.choices ? (
-              <div style={{display:"flex", flexDirection:"column", gap:"8px"}}>
-                {itemFoundModal.choices.map((ch, ci) => (
-                  <Btn key={ci} variant={ci === 0 ? "gold" : "normal"} onClick={() => { ch.action?.(); setItemFoundModal(null); }}
-                    style={{fontSize:"12px", padding:"9px 20px"}}>
-                    {ch.label}
-                  </Btn>
-                ))}
+
+              {/* Emoji ring */}
+              <div style={{position:"relative", width:"96px", height:"96px", margin:"10px auto 4px", display:"flex", alignItems:"center", justifyContent:"center"}}>
+                <div style={{position:"absolute", inset:0, borderRadius:"50%", background:`radial-gradient(circle,${accent}44 0%,${accent}16 50%,transparent 70%)`, animation:"itemGlowRing 2.2s ease-in-out infinite"}}/>
+                <div style={{position:"absolute", inset:"18%", borderRadius:"50%", border:`1px solid ${accent}44`, animation:"itemGlowRing 2.2s ease-in-out infinite 0.7s"}}/>
+                <div style={{fontSize:"50px", position:"relative", zIndex:1, filter:`drop-shadow(0 0 14px ${accent})`, animation:isDanger?"pulse 1.4s ease-in-out infinite":"none"}}>
+                  {em}
+                </div>
               </div>
-            ) : (
-              <Btn variant="success" onClick={() => setItemFoundModal(null)}
-                style={{fontSize:"13px", padding:"9px 28px"}}>
-                {itemFoundModal.buttonLabel || "OK →"}
-              </Btn>
-            )}
+
+              {/* Name */}
+              <div style={{color:"#fff", fontWeight:"bold", fontSize:"16px", padding:"0 18px 6px", textAlign:"center", textShadow:`0 0 12px ${accent}88`, letterSpacing:"0.4px"}}>
+                {itemFoundModal.name}
+              </div>
+
+              {/* Divider */}
+              <div style={{height:"1px", margin:"0 18px 10px", background:`linear-gradient(90deg,transparent,${accent}44,transparent)`}}/>
+
+              {/* Desc */}
+              <div style={{padding:"0 18px 14px", display:"flex", flexDirection:"column", gap:"2px"}}>
+                {descLines.map((line, i) => {
+                  if (!line.trim()) return <div key={i} style={{height:"4px"}}/>;
+                  const isArt = /^[\s]*[│┌┐└┘╔╗╚╝║═╠╣░▒▓┼─]/.test(line);
+                  const isStat = /^[+\-±]/.test(line.trim()) || /[€×x]\d/.test(line) || /VINCITA|BONUS|COMBO/.test(line);
+                  if (isArt) return (
+                    <div key={i} style={{color:`${accent}99`, fontSize:"9px", lineHeight:"1.3", fontFamily:"monospace", whiteSpace:"pre", overflow:"hidden", textOverflow:"ellipsis"}}>{line}</div>
+                  );
+                  return (
+                    <div key={i} style={{color:isStat?C.bright:C.text, fontSize:isStat?"12px":"11px", lineHeight:"1.7", fontWeight:isStat?"bold":"normal"}}>
+                      {line}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Buttons */}
+              <div style={{padding:"0 16px 18px", display:"flex", flexDirection:"column", gap:"8px"}}>
+                {itemFoundModal.choices ? (
+                  itemFoundModal.choices.map((ch, ci) => (
+                    <Btn key={ci} variant={ci===0?"gold":"normal"} onClick={() => { ch.action?.(); setItemFoundModal(null); }}
+                      style={{fontSize:"12px", padding:"10px 20px"}}>
+                      {ch.label}
+                    </Btn>
+                  ))
+                ) : (
+                  <div onClick={() => setItemFoundModal(null)} style={{
+                    padding:"11px 20px", background:`${accent}18`, border:`1px solid ${accent}88`,
+                    color:accent, fontSize:"13px", fontWeight:"bold", letterSpacing:"1px",
+                    cursor:"pointer", textAlign:"center", fontFamily:FONT,
+                    boxShadow:`0 0 14px ${accent}2a, inset 0 0 8px ${accent}0d`,
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.background=`${accent}2a`}
+                  onMouseLeave={e=>e.currentTarget.style.background=`${accent}18`}>
+                    {itemFoundModal.buttonLabel || "OK →"}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom shimmer */}
+              <div style={{height:"1px", background:`linear-gradient(90deg,transparent,${accent}44,${accent}88,${accent}44,transparent)`}}/>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══ NAIL EQUIP MODAL — "Su quale unghia lo equipaggi?" ═══ */}
       {nailEquipModal && player && (() => {
@@ -3144,13 +3226,22 @@ export default function Grattini() {
                 {player.items.map((itemId, idx) => {
                   const item = ITEM_DEFS[itemId];
                   if (!item) return null;
+                  const ZAINO_RC = { comune:"#7a8aaa", media:C.cyan, rara:"#cc66ff", epica:C.orange, rarissimo:C.gold, rarissima:C.gold };
+                  const rc = ZAINO_RC[item.rarity] || C.magenta;
                   return (
                     <Tooltip key={idx} text={item.desc}>
-                      <Btn onClick={() => { useItem(idx); if (player.items[idx] !== "cappelloSbirro") setShowInventoryPanel(false); }}
-                        style={{fontSize:"11px", borderColor: C.magenta+"44"}}>
-                        {item.emoji} {item.name}
-                        <span style={{display:"block", fontSize:"9px", color:C.dim}}>{item.rarity}</span>
-                      </Btn>
+                      <div
+                        onClick={() => { useItem(idx); if (itemId !== "cappelloSbirro") setShowInventoryPanel(false); }}
+                        style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"2px",
+                          padding:"7px 9px", background:`${rc}11`, border:`1px solid ${rc}55`,
+                          cursor:"pointer", minWidth:"62px", fontFamily:FONT, userSelect:"none"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=`${rc}22`}
+                        onMouseLeave={e=>e.currentTarget.style.background=`${rc}11`}
+                      >
+                        <div style={{fontSize:"22px", filter:`drop-shadow(0 0 5px ${rc}88)`}}>{item.emoji}</div>
+                        <div style={{color:C.bright, fontSize:"10px", fontWeight:"bold", whiteSpace:"nowrap", maxWidth:"68px", overflow:"hidden", textOverflow:"ellipsis"}}>{item.name}</div>
+                        <div style={{color:rc, fontSize:"8px", letterSpacing:"1px"}}>{(item.rarity||"").toUpperCase()}</div>
+                      </div>
                     </Tooltip>
                   );
                 })}
@@ -3169,21 +3260,26 @@ export default function Grattini() {
                 {player.grattatori.map((g, idx) => {
                   const def = GRATTATORE_DEFS[g.id];
                   const isEquipped = player.equippedGrattatore?.inventoryIdx === idx;
+                  const ZAINO_RC2 = { comune:"#7a8aaa", media:C.cyan, rara:"#cc66ff", epica:C.orange, rarissimo:C.gold, rarissima:C.gold };
+                  const rc = def ? (ZAINO_RC2[def.rarity] || C.cyan) : C.cyan;
                   return (
                     <Tooltip key={idx} text={`${g.desc || def?.desc} · ${g.usesLeft} usi rimasti`}>
-                      <Btn onClick={() => {
-                          if (isEquipped) { unequipGrattatore(); }
-                          else { equipGrattatore(idx); }
-                        }}
-                        style={{fontSize:"11px",
-                          borderColor: isEquipped ? C.cyan : C.cyan+"44",
-                          background: isEquipped ? "#001a2a" : "#0d0d1a",
-                          color: C.text}}>
-                        {g.emoji} {g.name}
-                        <span style={{display:"block", fontSize:"9px", color: isEquipped ? C.cyan : C.dim}}>
-                          {isEquipped ? "✓ EQUIPAGGIATO — clicca per togliere" : `${g.usesLeft} usi`}
-                        </span>
-                      </Btn>
+                      <div
+                        onClick={() => { if (isEquipped) unequipGrattatore(); else equipGrattatore(idx); }}
+                        style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"2px",
+                          padding:"7px 9px", background:isEquipped?`${rc}22`:`${rc}0c`,
+                          border:`1px solid ${isEquipped?rc:rc+"44"}`,
+                          boxShadow:isEquipped?`0 0 8px ${rc}44`:"none",
+                          cursor:"pointer", minWidth:"62px", fontFamily:FONT, userSelect:"none"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=`${rc}28`}
+                        onMouseLeave={e=>e.currentTarget.style.background=isEquipped?`${rc}22`:`${rc}0c`}
+                      >
+                        <div style={{fontSize:"22px", filter:`drop-shadow(0 0 5px ${rc}88)`}}>{g.emoji}</div>
+                        <div style={{color:C.bright, fontSize:"10px", fontWeight:"bold", whiteSpace:"nowrap", maxWidth:"68px", overflow:"hidden", textOverflow:"ellipsis"}}>{g.name}</div>
+                        <div style={{color:isEquipped?rc:C.dim, fontSize:"8px", letterSpacing:"1px"}}>
+                          {isEquipped ? "✓ ATTIVO" : `${g.usesLeft} usi`}
+                        </div>
+                      </div>
                     </Tooltip>
                   );
                 })}

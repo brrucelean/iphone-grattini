@@ -479,7 +479,7 @@ export function useNodeHandlers({
             return next;
           });
           setTimeout(() => {
-            setItemFoundModal({ emoji: relicDef.emoji, name: `RELIQUIA: ${relicDef.name}`, desc: `${relicDef.desc}\n\nEffetto permanente per tutta la run!`, subtitle: "RELIQUIA TROVATA!" });
+            setItemFoundModal({ emoji: relicDef.emoji, name: `RELIQUIA: ${relicDef.name}`, desc: `${relicDef.desc}\n\nEffetto permanente per tutta la run!`, subtitle: "RELIQUIA TROVATA!", rarity: relicDef.rarity });
           }, 500);
           addLog(`${relicDef.emoji} RELIQUIA TROVATA: ${relicDef.name}! ${relicDef.desc}`, C.gold);
         }

@@ -51,6 +51,7 @@ export function useShopHandlers({ player, updatePlayer, addLog, setGameStats, se
       emoji: item.emoji, name: item.name,
       desc: `${item.desc}\nPagato €${finalCost}${discount>0?` (sconto -${Math.round(discount*100)}%)`:""}.`,
       subtitle: "Acquistato dal Tabaccaio",
+      rarity: item.rarity,
     });
   };
 
@@ -67,6 +68,7 @@ export function useShopHandlers({ player, updatePlayer, addLog, setGameStats, se
       emoji: def.emoji, name: def.name,
       desc: `${def.desc}\nPagato €${finalCost}${discount > 0 ? ` (sconto -${Math.round(discount*100)}%)` : ""}.`,
       subtitle: "Grattatore acquistato",
+      rarity: def.rarity,
     });
   };
 
