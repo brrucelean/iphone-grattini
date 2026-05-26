@@ -11,16 +11,16 @@ export const S = {
     overflowX: "hidden",
     background: C.bg,
   },
-  // Pannello standard — bordo 2px pieno + pixel-drop-shadow
+  // Pannello standard — bordo 2px pieno + pixel-drop-shadow + gradient top
   panel: {
-    background: C.card,
+    background: `linear-gradient(180deg, ${C.card} 0%, #030308 100%)`,
     border: `2px solid ${C.dim}`,
     borderRadius: "0",
     padding: "clamp(10px, 1.5vh, 18px) clamp(12px, 2vw, 28px)",
     margin: "4px clamp(8px, 2vw, 24px)",
     width: "calc(100% - clamp(16px, 4vw, 48px))",
     maxWidth: "1100px",
-    boxShadow: `4px 4px 0 #000000, 0 0 16px ${C.cyan}18`,
+    boxShadow: `4px 4px 0 #000000, 0 0 20px ${C.cyan}14, inset 0 0 20px #00000066`,
   },
   // Bottone default — bordo 2px + pixel shadow
   btn: {

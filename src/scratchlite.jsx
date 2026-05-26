@@ -468,16 +468,26 @@ export default function Grattini() {
         @keyframes asciiFlicker { 0%,100% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } 47% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } 48% { text-shadow: 0 0 2px currentColor, 0 0 6px currentColor44; } 52% { text-shadow: 0 0 2px currentColor, 0 0 6px currentColor44; } 53% { text-shadow: 0 0 14px currentColor, 0 0 40px currentColor55; } }
         @keyframes itemFoundIn { 0% { transform:scale(0.8); opacity:0; } 55% { transform:scale(1.04); } 100% { transform:scale(1); opacity:1; } }
         @keyframes itemGlowRing { 0%,100% { opacity:0.55; transform:scale(0.94); } 50% { opacity:1; transform:scale(1.08); } }
+        @keyframes screenIn { 0% { opacity:0; transform:translateY(5px); } 100% { opacity:1; transform:translateY(0); } }
+        @keyframes popIn { 0% { opacity:0; transform:scale(0.86); } 60% { transform:scale(1.05); } 100% { opacity:1; transform:scale(1); } }
+        @keyframes crtFlicker { 0%,93%,100% { opacity:1; } 94% { opacity:0.91; } 96% { opacity:0.97; } 98% { opacity:0.93; } }
+        @keyframes goldSheen { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+        @keyframes slideUp { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:translateY(0); } }
+        @keyframes biomePulse { 0%,100% { opacity:0.55; } 50% { opacity:1; } }
+        @keyframes borderGlow { 0%,100% { box-shadow:0 0 4px currentColor33; } 50% { box-shadow:0 0 12px currentColor66, 0 0 24px currentColor22; } }
+        @keyframes nailCrit { 0% { transform:scale(1); } 20% { transform:scale(1.18); filter:brightness(1.6); } 50% { transform:scale(0.94); } 100% { transform:scale(1); filter:brightness(1); } }
+        @keyframes chipIn { 0% { opacity:0; transform:translateX(-6px) scale(0.9); } 100% { opacity:1; transform:translateX(0) scale(1); } }
         /* .foil-ascii::after rimosso — il shimmer diagonale con mix-blend-mode:screen
            creava un "contorno brillante" deformato sulle lettere box-drawing del titolo.
            Il class resta no-op per back-compat; il titolo ora si affida solo al gold
            base + text-shadow + asciiFlicker. */
-        .foil-ascii { position: relative; display: inline-block; }
+        .foil-ascii { position: relative; display: inline-block; animation: crtFlicker 14s ease-in-out infinite; }
         html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
         * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 6px; height: 0px; }
-        ::-webkit-scrollbar-track { background: ${C.bg}; }
-        ::-webkit-scrollbar-thumb { background: ${C.dim}; border-radius: 3px; }
+        ::-webkit-scrollbar { width: 4px; height: 0px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: ${C.dim}88; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: ${C.dim}; }
         /* Forza il cursore unghia su tutto — sovrascrive pointer di sistema su button/link */
         button, a, input, select, [role="button"], [tabindex] { cursor: inherit !important; }
         /* ── MOBILE / iPhone: tap target Apple HIG (min 44px) ── */
@@ -721,17 +731,19 @@ export default function Grattini() {
       {player && !["title","tutorialNails"].includes(screen) && (
         <div style={isMobile ? {
           width:"100%", flexShrink:0,
-          borderBottom:"1px solid #12121e",
-          background:"#05050d",
+          borderBottom:`2px solid ${bioPal.border}55`,
+          background: bioPal.panelBg,
           overflowX:"auto", overflowY:"hidden",
           padding:"6px 8px",
+          transition:"border-color 0.6s, background 0.6s",
         } : {
           width:"160px", flexShrink:0,
-          borderRight:"1px solid #12121e",
-          background:"#05050d",
+          borderRight:`1px solid ${bioPal.border}44`,
+          background: bioPal.panelBg,
           display:"flex", flexDirection:"column",
           overflowY:"auto", overflowX:"hidden",
           padding:"8px 6px",
+          transition:"border-color 0.6s, background 0.6s",
         }}>
           <NailSidebar nails={player.nails} activeNail={player.activeNail} onSelectNail={handleSelectNail} locked={!!scratchingCard} grattatori={player.grattatori||[]} equippedGrattatore={player.equippedGrattatore} onEquipGrattatore={equipGrattatore} horizontal={isMobile} />
         </div>
@@ -742,9 +754,10 @@ export default function Grattini() {
         <div style={{
           flexShrink:0, height:"22px",
           display:"flex", alignItems:"stretch", overflow:"hidden",
-          background:"#030308",
-          borderBottom:"1px solid #0c0c1a",
+          background: bioPal.logBg,
+          borderBottom:`1px solid ${bioPal.border}33`,
           paddingLeft:"6px", paddingRight:"6px",
+          transition:"border-color 0.6s, background 0.6s",
         }}>
           <NewsTicker currentBiome={currentBiome} />
         </div>
@@ -759,8 +772,14 @@ export default function Grattini() {
         WebkitOverflowScrolling:"touch", /* momentum scroll iOS */
         display:"flex", flexDirection:"column", alignItems:"center",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)",
-        backgroundAttachment:"local", position:"relative",
+        /* Scanlines CRT + ambient glow del bioma corrente */
+        backgroundImage: [
+          "repeating-linear-gradient(180deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.26) 2px, rgba(0,0,0,0.26) 4px)",
+          `radial-gradient(ellipse 80% 42% at 50% 0%, ${bioPal.border}12 0%, transparent 100%)`,
+        ].join(","),
+        backgroundAttachment: "local",
+        position: "relative",
+        transition: "background-image 0.8s ease",
       }}>
 
       {/* ═══ TITLE SCREEN ═══ */}
@@ -793,35 +812,45 @@ export default function Grattini() {
         <div style={{
           width:"100%", flex:1, display:"flex", flexDirection:"column",
           alignItems:"center", justifyContent:"center",
-          position:"relative", padding:"24px 0",
+          position:"relative", padding:"24px 12px",
         }}>
 
           {/* Contenuto titolo */}
-          <div style={{textAlign:"center", width:"min(95%, 1120px)", position:"relative", zIndex:1}}>
+          <div style={{textAlign:"center", width:"min(95%, 440px)", position:"relative", zIndex:1}}>
             {/* ASCII TITLE — foil iridescente animato sopra il gold */}
-            <div className="foil-ascii" style={{display:"inline-block", margin:"0 auto"}}>
+            <div className="foil-ascii" style={{display:"inline-block", margin:"0 auto", padding:"8px 0"}}>
               <pre style={{...S.pre, color:C.gold,
-                fontSize:"clamp(11px, 1.9vw, 20px)",
+                fontSize:"clamp(10px, 1.9vw, 19px)",
                 lineHeight:"1.2", overflowX:"auto",
-                textShadow:`0 0 14px ${C.gold}aa, 0 0 40px ${C.gold}55`,
+                textShadow:`0 0 18px ${C.gold}cc, 0 0 48px ${C.gold}55`,
                 animation:"titleBlink 3s ease-in-out infinite, asciiFlicker 7s ease-in-out infinite",
                 margin:0,
               }}>
                 {ASCII_TITLE}
               </pre>
             </div>
-            <div style={{color:C.gold, fontSize:"clamp(11px, 1.2vw, 15px)", marginTop:"16px", letterSpacing:"5px",
-              textShadow:`0 0 10px ${C.gold}88`,
+            {/* Divisore oro */}
+            <div style={{
+              width:"80%", height:"1px", margin:"12px auto 14px",
+              background:`linear-gradient(90deg, transparent, ${C.gold}99, transparent)`,
+              boxShadow:`0 0 8px ${C.gold}55`,
+            }}/>
+            <div style={{color:C.dim, fontSize:"clamp(9px, 1.2vw, 12px)", letterSpacing:"4px",
+              textShadow:`0 0 8px ${C.gold}44`,
             }}>
-              ░░░ BETA 5 — Graphics Pass ░░░
+              ░ BETA 5 ░
             </div>
-            <div style={{color:C.text, marginBottom:"28px", marginTop:"20px", fontSize:"clamp(12px, 1.1vw, 15px)", letterSpacing:"0.5px", textAlign:"center"}}>
-            Un roguelike di grattate, unghie e fortuna.
-          </div>
-          <Btn variant="gold" onClick={startGame} style={{fontSize:"clamp(14px, 1.4vw, 18px)", padding:"16px 48px", letterSpacing:"3px"}}>
+            <div style={{color:C.text+"aa", marginBottom:"28px", marginTop:"14px", fontSize:"clamp(11px, 1.1vw, 14px)", letterSpacing:"0.5px", textAlign:"center", lineHeight:"1.6"}}>
+              Un roguelike di grattate, unghie e fortuna.
+            </div>
+          <Btn variant="gold" onClick={startGame} style={{
+            fontSize:"clamp(13px, 1.4vw, 16px)", padding:"16px 44px", letterSpacing:"3px",
+            boxShadow:`0 0 24px ${C.gold}66, 4px 4px 0 #000`,
+            animation:"neonPulse 2s ease-in-out infinite",
+          }}>
             ░░░ INIZIA LA RUN ░░░
           </Btn>
-          <div style={{color:C.dim, fontSize:"clamp(10px, 0.9vw, 12px)", marginTop:"24px", letterSpacing:"1px", lineHeight:"1.8"}}>
+          <div style={{color:C.dim, fontSize:"clamp(9px, 0.9vw, 11px)", marginTop:"20px", letterSpacing:"1px", lineHeight:"1.9", opacity:0.7}}>
             5 unghie · 3 biomi · 1 destino<br/>
             Gratta con saggezza. Le unghie non ricrescono.
           </div>

@@ -592,13 +592,13 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
   return (
     <div style={{
       ...S.panel, textAlign:"center",
-      maxWidth:"440px", margin:"10px auto",
+      maxWidth:"440px", margin:"8px auto",
       position: "relative",
       border:`2px solid ${panelBorder}`,
-      background: "#05050b",
-      boxShadow: `0 0 22px ${panelBorder}33, inset 0 0 28px ${panelBorder}0a`,
-      transition:"none",
-      animation: winFound ? "winFlash 1.5s ease-out" : "none",
+      background: `linear-gradient(180deg, ${panelBorder}08 0%, #05050b 18%)`,
+      boxShadow: `0 0 28px ${panelBorder}33, inset 0 0 32px ${panelBorder}0a, 4px 4px 0 #000`,
+      animation: winFound ? "winFlash 1.5s ease-out" : "screenIn 0.25s ease-out",
+      transition: "border-color 0.3s, box-shadow 0.3s",
     }}>
       {cornerBrackets(panelBorder, 12, 6, true)}
 
@@ -1047,17 +1047,28 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
           }
         </div>
         <div style={{
-          height: "6px", background: "#0a0a14",
-          border: `1px solid ${accent}44`,
+          height: "7px", background: "#0a0a14",
+          border: `1px solid ${accent}55`,
           position: "relative", overflow: "hidden",
+          boxShadow: `inset 0 0 6px #00000088`,
         }}>
           <div style={{
             width: `${totalCells > 0 ? (scratched / totalCells) * 100 : 0}%`,
             height: "100%",
-            background: `linear-gradient(90deg, ${accent}88, ${accent})`,
-            boxShadow: `0 0 8px ${accent}`,
-            transition: "width 0.2s ease-out",
-          }}/>
+            background: `linear-gradient(90deg, ${accent}77, ${accent}ee, ${accent}aa)`,
+            boxShadow: `0 0 10px ${accent}99, 0 0 4px ${accent}`,
+            transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+            position: "relative", overflow: "hidden",
+          }}>
+            {scratched > 0 && scratched < totalCells && (
+              <div style={{
+                position:"absolute", inset:0,
+                background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.32) 50%, transparent 100%)",
+                backgroundSize:"200% 100%",
+                animation:"goldSheen 1.4s linear infinite",
+              }}/>
+            )}
+          </div>
         </div>
       </div>
 

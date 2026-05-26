@@ -69,7 +69,7 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               border:`1px solid ${borderCol}`,
               background: sidebarBg,
               boxShadow: sidebarGlow,
-              padding: horizontal ? "5px 4px" : "5px 8px", borderRadius:"0",
+              padding: horizontal ? "5px 4px 3px" : "5px 8px", borderRadius:"0",
               cursor: canSwitch ? "pointer" : "default",
               opacity: isDead ? 0.35 : 1,
               display:"flex",
@@ -77,8 +77,11 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
               alignItems:"center",
               justifyContent: horizontal ? "center" : undefined,
               gap: horizontal ? "2px" : "6px",
-              transition:"box-shadow 0.2s, border-color 0.2s",
-              ...(horizontal ? { minWidth:"64px", maxWidth:"64px", height:"82px", flexShrink:0 } : {}),
+              transition:"box-shadow 0.25s, border-color 0.25s, background 0.25s",
+              ...(horizontal ? {
+                minWidth:"68px", maxWidth:"68px", height:"88px", flexShrink:0,
+                borderBottom: isActive ? `3px solid ${col}` : isDead ? "3px solid #111" : `3px solid ${col}22`,
+              } : {}),
             }}>
             {locked && !isActive && !isDead && (
               <div style={{
@@ -114,20 +117,22 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
                   <span style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"2px", width:"100%"}}>
                     {/* Emoji grande */}
                     <span style={{
-                      fontSize:"20px", lineHeight:1,
+                      fontSize:"22px", lineHeight:1,
                       filter: !isDead && visual?.glow && visual.glow !== "none"
-                        ? `drop-shadow(0 0 5px ${col})` : "none",
+                        ? `drop-shadow(0 0 6px ${col})` : "none",
+                      animation: isActive && !isDead ? "crtFlicker 6s ease-in-out infinite" : "none",
                     }}>
                       {visual?.emoji || "🖐"}
                     </span>
-                    {/* Etichetta stato — visibile su touch dove il tooltip è disabilitato */}
+                    {/* Etichetta stato */}
                     <span style={{
-                      color: isDead ? "#555" : col+"cc",
-                      fontSize:"6.5px", fontWeight:"bold",
-                      letterSpacing:"0.3px", lineHeight:1.1,
-                      maxWidth:"60px", overflow:"hidden",
+                      color: isDead ? "#444" : isActive ? col : col+"aa",
+                      fontSize:"7px", fontWeight: isActive ? "bold" : "normal",
+                      letterSpacing:"0.4px", lineHeight:1.1,
+                      maxWidth:"64px", overflow:"hidden",
                       textOverflow:"ellipsis", whiteSpace:"nowrap",
                       textAlign:"center",
+                      textShadow: isActive && !isDead ? `0 0 6px ${col}88` : "none",
                     }}>{stateLabel}</span>
                     {/* HP tier pips */}
                     <span style={{display:"flex", gap:"1px", alignItems:"center"}}>
@@ -148,8 +153,7 @@ export function NailSidebar({ nails, activeNail, onSelectNail, locked=false, gra
                         })}
                       </span>
                     )}
-                    {/* Indicatore nail attiva */}
-                    {isActive && <span style={{color:col, fontSize:"7px", fontWeight:"bold", letterSpacing:"0.5px"}}>●</span>}
+                    {/* Indicatore nail attiva — bottom bar gestita sul container */}
                   </span>
                 </Tooltip>
               );

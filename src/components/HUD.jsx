@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C } from "../data/theme.js";
+import { BIOME_PALETTE } from "../data/biomes.js";
 import { AudioEngine } from "../audio.js";
 import { S } from "../utils/styles.js";
 import { fmtMoney } from "../utils/money.js";
@@ -35,6 +36,7 @@ function StatusChip({ color, children, danger = false, active = false, onClick, 
 }
 
 export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling = 0, currentBiome = 0 }) {
+  const bioPal = BIOME_PALETTE[currentBiome] || BIOME_PALETTE[0];
   const aliveNails = player.nails.filter(n => n.state !== "morta").length;
   const [vol, setVol] = useState(AudioEngine.getVolume());
   // ── Responsive: traccia larghezza viewport per nascondere elementi non-critici
@@ -113,32 +115,36 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
     return (
       <div style={{
         display:"flex", flexDirection:"column",
-        background:"#0a0a18",
-        border:`2px solid ${C.dim}`,
+        background: bioPal.hudBg,
+        border:`2px solid ${bioPal.border}77`,
         margin:"4px 8px",
-        boxShadow:`3px 3px 0 #000000`,
+        boxShadow:`3px 3px 0 #000000, 0 0 16px ${bioPal.border}18`,
         fontFamily: "inherit",
         overflow:"hidden",
+        transition:"border-color 0.6s, box-shadow 0.6s, background 0.6s",
       }}>
         {/* ── Riga principale ── */}
-        <div style={{display:"flex", alignItems:"center", gap:"6px", padding:"5px 10px", minHeight:"34px"}}>
+        <div style={{display:"flex", alignItems:"center", gap:"6px", padding:"5px 10px", minHeight:"36px"}}>
           {/* Soldi */}
           <span key={moneyBling} style={{
-            display:"inline-flex", alignItems:"center", gap:"3px",
-            background:`linear-gradient(180deg,${C.gold}22,${C.gold}08)`,
+            display:"inline-flex", alignItems:"center", gap:"4px",
+            background:`linear-gradient(135deg, ${C.gold}28, ${C.gold}0a)`,
             border:`2px solid ${C.gold}cc`,
-            color:C.gold, fontWeight:"bold", fontSize:"13px",
-            padding:"1px 6px",
-            boxShadow:`0 0 6px ${C.gold}44`,
+            color:C.gold, fontWeight:"bold", fontSize:"14px",
+            padding:"2px 8px",
+            boxShadow:`0 0 8px ${C.gold}55, inset 0 0 8px ${C.gold}0a`,
+            textShadow:`0 0 8px ${C.gold}99`,
             animation: moneyBling > 0 ? "moneyBling 0.6s ease-out" : "none",
             cursor:"default", flexShrink:0,
           }}>💰 €{fmtMoney(player.money)}</span>
           {/* Grattini */}
           <span style={{
-            display:"inline-flex", alignItems:"center", gap:"2px",
+            display:"inline-flex", alignItems:"center", gap:"3px",
             color:C.cyan, fontSize:"12px",
             border:`2px solid ${C.cyan}88`,
-            padding:"1px 5px", flexShrink:0,
+            background:`${C.cyan}0a`,
+            padding:"2px 6px", flexShrink:0,
+            boxShadow:`inset 0 0 6px ${C.cyan}14`,
           }}>🎫<b>{ownedCards}</b></span>
           {/* Spacer */}
           <span style={{flex:1}} />
@@ -206,13 +212,14 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
   );
   return (
     <div style={{...S.panel, display:"flex", justifyContent:"space-between", alignItems:"center",
-      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background:"#0a0a18", borderColor:C.dim, borderWidth:"2px",
+      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background: bioPal.hudBg, borderColor: bioPal.border + "66", borderWidth:"2px",
       maxWidth:"calc(100% - 16px)", width:"calc(100% - 16px)", margin:"4px 8px",
       boxSizing:"border-box", overflow:"hidden", minWidth:0,
       position:"relative",
-      boxShadow:`4px 4px 0 #000000, 0 0 14px ${C.gold}22, inset 0 0 16px #00000099`,
+      boxShadow:`4px 4px 0 #000000, 0 0 18px ${bioPal.border}22, inset 0 0 16px #00000099`,
+      transition:"border-color 0.6s, box-shadow 0.6s, background 0.6s",
     }}>
-      {/* ── Corner brackets Vintage (discreti) ── */}
+      {/* ── Corner brackets — biome-tinted ── */}
       {["tl","tr","bl","br"].map(pos => {
         const [v,h] = pos.split("");
         return (
@@ -220,13 +227,14 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
             position:"absolute",
             [v==="t"?"top":"bottom"]:"-2px",
             [h==="l"?"left":"right"]:"-2px",
-            width:"10px", height:"10px",
-            borderTop: v==="t" ? `1px solid ${C.gold}88` : "none",
-            borderBottom: v==="b" ? `1px solid ${C.gold}88` : "none",
-            borderLeft: h==="l" ? `1px solid ${C.gold}88` : "none",
-            borderRight: h==="r" ? `1px solid ${C.gold}88` : "none",
-            boxShadow:`0 0 4px ${C.gold}66`,
+            width:"12px", height:"12px",
+            borderTop: v==="t" ? `2px solid ${bioPal.border}99` : "none",
+            borderBottom: v==="b" ? `2px solid ${bioPal.border}99` : "none",
+            borderLeft: h==="l" ? `2px solid ${bioPal.border}99` : "none",
+            borderRight: h==="r" ? `2px solid ${bioPal.border}99` : "none",
+            boxShadow:`0 0 6px ${bioPal.border}77`,
             pointerEvents:"none",
+            transition:"border-color 0.6s, box-shadow 0.6s",
           }}/>
         );
       })}
