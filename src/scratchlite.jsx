@@ -2444,10 +2444,10 @@ export default function Grattini() {
             newPrize += X_PRIZE;
             addLog(`💎 TESORO TROVATO! +€${X_PRIZE} (${newFoundTreasures}/2)`, C.gold);
             if (newFoundTreasures >= 2) {
-              // JACKPOT — trovati tutti i tesori
-              const total = JACKPOT_PRIZE;
+              // JACKPOT — trovati tutti i tesori: paga il cumulato + jackpot bonus
+              const total = newPrize + JACKPOT_PRIZE;
               updatePlayer(p => ({...p, money: p.money + total}));
-              addLog(`🗺️ JACKPOT! Trovato tutto! +€${total}!`, C.gold);
+              addLog(`🗺️ JACKPOT! Trovato tutto! €${newPrize} accumulati + €${JACKPOT_PRIZE} bonus = +€${total}!`, C.gold);
               setTesoroState(null); setSpecialCardRef(null); setScratchingCard(null);
               if(currentNode)setScreen("preScratch");else setScreen("map");
               return;

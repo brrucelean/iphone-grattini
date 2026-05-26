@@ -259,8 +259,8 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
       if (sym && !winFound) {
         const { prize: rawP, fullPrize: rawFP, cancelled: wc } = calcPrize();
         const fallback = Math.max(card.cost, Math.round(card.cost + Math.random() * card.maxPrize * 0.15));
-        const prize = rawP > 0 ? rawP : applyGrattatoreBonus(fallback);
-        const fullPrize = rawFP > 0 ? rawFP : prize;
+        const prize = wc ? 0 : (rawP > 0 ? rawP : applyGrattatoreBonus(fallback));
+        const fullPrize = wc ? 0 : (rawFP > 0 ? rawFP : prize);
         setWinFound(true); setWinSymbol(sym); setWinPrize(prize); setWinPrizeFull(fullPrize); setCancelled(wc);
         AudioEngine.win();
       }
@@ -274,7 +274,10 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
       runningSumRef.current = newSum;
       setRunningSum(newSum);
       if (newSum === 13) {
-        const { prize, fullPrize, cancelled: wc } = calcPrize();
+        const { prize: rawP, fullPrize: rawFP, cancelled: wc } = calcPrize();
+        const sum13Fallback = Math.max(card.cost * 2, card.prize || card.cost * 2);
+        const prize = wc ? 0 : (rawP > 0 ? rawP : sum13Fallback);
+        const fullPrize = wc ? 0 : (rawFP > 0 ? rawFP : prize);
         setWinFound(true); setWinPrize(prize); setWinPrizeFull(fullPrize); setCancelled(wc);
         AudioEngine.win();
       } else if (newSum > 13) {
@@ -325,8 +328,8 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
           const sm = Math.max(0, newSum - (card.bancoTotal || 0));
           const smRatio = Math.min(sm / 7.5, 1);
           const fallback = Math.max(card.cost * 3, Math.round(card.cost + smRatio * (card.maxPrize - card.cost)));
-          const safePrize = rawPrize > 0 ? rawPrize : fallback;
-          const safeFullPrize = rawFull > 0 ? rawFull : safePrize;
+          const safePrize = wc ? 0 : (rawPrize > 0 ? rawPrize : fallback);
+          const safeFullPrize = wc ? 0 : (rawFull > 0 ? rawFull : safePrize);
           setWinFound(true); setWinPrize(safePrize); setWinPrizeFull(safeFullPrize); setCancelled(wc);
           AudioEngine.win();
         } else {
@@ -345,13 +348,22 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
         const allSame = syms[0] === syms[1] && syms[1] === syms[2];
         const twoSame = syms[0]===syms[1] || syms[1]===syms[2] || syms[0]===syms[2];
         if (allSame) {
-          const { prize, fullPrize, cancelled: wc } = calcPrize();
+          const { prize: rawP, fullPrize: rawFP, cancelled: wc } = calcPrize();
+          const ruotaFallback = Math.max(card.cost * 3, card.prize || card.cost * 3);
+          const prize = wc ? 0 : (rawP > 0 ? rawP : ruotaFallback);
+          const fullPrize = wc ? 0 : (rawFP > 0 ? rawFP : prize);
           setWinFound(true); setWinSymbol(syms[0]); setWinPrize(prize); setWinPrizeFull(fullPrize); setCancelled(wc);
           AudioEngine.win();
         } else if (twoSame) {
+          // Consolazione: quasi-win paga card.prize (generato come type.cost × 1.3 in card.js)
+          const consolePrize = card.prize > 0 ? card.prize : Math.round(card.cost * 1.3);
           setNearWin(true);
           AudioEngine.lose();
-          setTimeout(() => { setNearWin(false); setShowNoWin(true); }, 1200);
+          setTimeout(() => {
+            setNearWin(false);
+            setWinFound(true); setWinPrize(consolePrize); setWinPrizeFull(consolePrize); setCancelled(false);
+            AudioEngine.win();
+          }, 1200);
         } else {
           AudioEngine.lose();
           setShowNoWin(true);
@@ -384,10 +396,12 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
     const sym = checkWin(newCells);
     if (sym && !winFound) {
       const { prize: rawP, fullPrize: rawFP, cancelled: wc } = calcPrize();
-      const prize = rawP > 0 ? rawP : Math.max(card.cost, Math.round(card.cost + Math.random() * card.maxPrize * 0.15));
+      const matchFallback = Math.max(card.cost, Math.round(card.cost + Math.random() * card.maxPrize * 0.15));
+      // Quando cancellato: premio = 0. Altrimenti usa calcPrize o il fallback se arrotonda a 0.
+      const prize = wc ? 0 : (rawP > 0 ? rawP : matchFallback);
       // Preserva il "full" (pre-penalità) anche quando prize cade al fallback —
       // così il display "€X → €Y" mostra davvero due valori diversi se c'è penalità.
-      const fullPrize = rawFP > 0 ? rawFP : (rawP > 0 ? prize : Math.max(prize, card.prize || prize));
+      const fullPrize = wc ? 0 : (rawFP > 0 ? rawFP : (rawP > 0 ? prize : Math.max(prize, card.prize || prize)));
       setWinFound(true); setWinSymbol(sym); setWinPrize(prize); setWinPrizeFull(fullPrize); setCancelled(wc);
       setNearWin(false);
       AudioEngine.win();
@@ -431,8 +445,8 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
     if (sym && !winFound) {
       const { prize: rawP, fullPrize: rawFP, cancelled: wc } = calcPrize();
       const fallback2 = Math.max(card.cost, Math.round(card.cost + Math.random() * card.maxPrize * 0.15));
-      const prize = rawP > 0 ? rawP : applyGrattatoreBonus(fallback2);
-      const fullPrize = rawFP > 0 ? rawFP : prize;
+      const prize = wc ? 0 : (rawP > 0 ? rawP : applyGrattatoreBonus(fallback2));
+      const fullPrize = wc ? 0 : (rawFP > 0 ? rawFP : prize);
       setWinFound(true); setWinSymbol(sym); setWinPrize(prize); setWinPrizeFull(fullPrize); setCancelled(wc);
       AudioEngine.win();
     } else if (!sym) {
@@ -463,6 +477,11 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
 
     // ── collect win ────────────────────────
     if (card.mechanic === "collect" && claiming) {
+      // Cancelled (unghia nera/morta) — nessun premio
+      if (cancelled) {
+        onDone({ win: false, prize: 0, message: "VINCITA ANNULLATA! L'unghia ha rovinato il biglietto!", cellsScratched: scratched });
+        return;
+      }
       const effMarcia = nailState === "marcia" || scratchedWhileMarcia.current;
       const rawCollected = effMarcia ? Math.round(collectedRef.current * 0.15) : collectedRef.current;
       const effCollected = applyGrattatoreBonus(rawCollected);
@@ -496,7 +515,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
           msg += ` 🔘 Bottone: €${baseP} +10% → €${winPrize}!`;
         }
       }
-      onDone({ win: !cancelled && winPrize > 0, prize: winPrize, message: msg, cellsScratched: scratched });
+      onDone({ win: !cancelled && winPrize > 0, prize: cancelled ? 0 : winPrize, message: msg, cellsScratched: scratched });
     } else {
       let malusPrize = 0;
       let msg = card.mechanic === "doppioOnulla" ? "🎲 DOPPIO O NULLA: Hai perso! ❌ €0." :
