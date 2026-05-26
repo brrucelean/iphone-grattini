@@ -426,18 +426,20 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     {icon}
                   </span>
 
-                  {/* Etichetta tipo — 2 righe max, no ellipsis che tronca male */}
+                  {/* Etichetta tipo — 2 righe max, font 7px per evitare troncatura su iOS */}
                   <span style={{
-                    fontSize: isBoss ? "9px" : "8px",
+                    fontSize: isBoss ? "9px" : "7px",
                     color: labelColor,
                     fontFamily:FONT, fontWeight:"bold",
-                    textAlign:"center", lineHeight:"1.15",
-                    width:`${NW - 8}px`,
+                    textAlign:"center", lineHeight:"1.2",
+                    width:`${NW - 4}px`,
                     display:"-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient:"vertical",
                     overflow:"hidden",
                     wordBreak:"break-word",
+                    WebkitTextSizeAdjust:"none",
+                    textSizeAdjust:"none",
                     textShadow: isActive ? `0 0 5px ${borderCol}` : "none",
                   }}>
                     {label.toUpperCase()}
