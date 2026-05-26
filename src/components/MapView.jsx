@@ -8,8 +8,7 @@ import { Tooltip } from "./Tooltip.jsx";
 // Nodi fissi grandi → la mappa scrolla verticalmente invece di
 // comprimere tutto in viewport. Su iPhone i nodi sono toccabili.
 const ROW_H = 90;   // altezza per riga
-const NW    = 84;   // larghezza nodo
-const NH    = 66;   // altezza nodo
+// NW/NH sono calcolati dinamicamente dentro MapView in base alla larghezza disponibile
 
 const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
 const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
@@ -39,6 +38,12 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
   const vw        = typeof window !== "undefined" ? window.innerWidth : 900;
   const W         = Math.min(860, vw - 16);
 
+  // NW dinamico — riduce la larghezza dei nodi quando ce ne sono tanti per riga,
+  // così non si sovrappongono su schermi stretti (es. iPhone con 5 nodi × 84px = 420px > 374px)
+  const maxNodesPerRow = map.rows.reduce((acc, r) => Math.max(acc, r.length), 1);
+  const NW = Math.min(84, Math.floor(W / Math.max(1, maxNodesPerRow)));
+  const NH = Math.round(NW * 66 / 84);  // mantieni proporzione 84:66
+
   // Posizioni pixel nodi (centrate, con margine NW/2 ai bordi così non vengono tagliati)
   const nodePos = useMemo(() => {
     const pos = {};
@@ -52,7 +57,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
       });
     });
     return pos;
-  }, [map, W]);
+  }, [map, W, NW]);
 
   // Edges con shortcut
   const edges = useMemo(() => {
