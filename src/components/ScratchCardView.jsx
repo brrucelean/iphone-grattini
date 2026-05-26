@@ -40,6 +40,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
   const [showNoWin, setShowNoWin] = useState(false);
   const [revealMsg, setRevealMsg] = useState(null); // "🔑 2 celle rivelate!" or "💿 x2!"
   const [nearWin, setNearWin] = useState(false); // quasi-vincita: 1 symbol away from winning
+  const winBoxRef = useRef(null); // ref per scroll-into-view al momento della vincita
 
   // ── La Ruota: rulli in spin prima del click ──────────────────
   const RUOTA_SYMS = CARD_SYMBOLS.ruota;
@@ -83,6 +84,15 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
       setCancelled(c);
     }
   }, [nailState, winFound, finished]);
+
+  // Scrolla la win box in vista quando compare (carte alte come Puzzle la spingono fuori viewport)
+  useEffect(() => {
+    if (winFound && !finished && winBoxRef.current) {
+      setTimeout(() => {
+        winBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 80); // piccolo delay per assicurarsi che React abbia renderizzato il box
+    }
+  }, [winFound]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const newId = card.name + card.prize + card.symbols?.join("");
@@ -1112,7 +1122,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
           : isDirty ? "VINCITA SPORCA"
           : "VINCITA!";
         return (
-          <div style={{
+          <div ref={winBoxRef} style={{
             position: "relative",
             background: isDirty ? "#1a0000" : cancelled ? "#1a0000" : "#001a0a",
             border: `2px solid ${borderCol}`,

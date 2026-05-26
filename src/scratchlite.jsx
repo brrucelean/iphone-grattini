@@ -511,7 +511,7 @@ export default function Grattini() {
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
       {globalPainFlash > 0 && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:`rgba(220,0,0,${globalPainFlash})`,
           boxShadow:"none",
           zIndex:99998, pointerEvents:"none",
@@ -523,7 +523,7 @@ export default function Grattini() {
       {/* ═══ MODALE MORTE UNGHIA — rimane finché non clicchi ═══ */}
       {nailDeathFlash && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.94)",
           zIndex:100000,
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
@@ -2844,7 +2844,7 @@ export default function Grattini() {
       {/* ═══ ITEM FOUND MODAL ═══ */}
       {itemFoundModal && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.82)", zIndex:99998,
           display:"flex", alignItems:"center", justifyContent:"center",
         }}>
@@ -2898,7 +2898,7 @@ export default function Grattini() {
         const activeNailColor = NAIL_INFO[player.nails[player.activeNail]?.state]?.color || C.magenta;
         return (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.88)", zIndex:99998,
           display:"flex", alignItems:"center", justifyContent:"center",
         }}>
@@ -3028,7 +3028,7 @@ export default function Grattini() {
       {/* ═══ STAMP OVERLAY (Timbro WIN) ═══ */}
       {stampOverlay && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           zIndex:999999, pointerEvents:"none",
           display:"flex", alignItems:"center", justifyContent:"center",
         }}>
@@ -3050,7 +3050,7 @@ export default function Grattini() {
       {/* ═══ SMOKE CHOICE MODAL ═══ */}
       {smokeChoiceModal && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.85)", zIndex:99999,
           display:"flex", alignItems:"center", justifyContent:"center",
         }}>
@@ -3197,7 +3197,7 @@ export default function Grattini() {
       {/* ═══ SMOKE EFFECT OVERLAY ═══ */}
       {showSmokeEffect && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(20,40,20,0.45)", zIndex:99997, pointerEvents:"none",
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
           animation:"fadeOut 2.5s forwards",
@@ -3213,7 +3213,7 @@ export default function Grattini() {
       {/* ═══ SOGNO MODAL ═══ */}
       {dreamModal && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.93)", zIndex:99999,
           display:"flex", alignItems:"center", justifyContent:"center",
           fontFamily:FONT,
@@ -3597,7 +3597,7 @@ export default function Grattini() {
       {/* ═══ TROPHIES OVERLAY ═══ */}
       {showTrophies && (
         <div style={{
-          position:"fixed", top:0, left:0, width:"100%", height:"100%",
+          position:"fixed", inset:0,
           background:"rgba(0,0,0,0.92)", zIndex:99990,
           display:"flex", alignItems:"center", justifyContent:"center",
           fontFamily: FONT, padding:"16px",
@@ -3759,7 +3759,7 @@ export default function Grattini() {
         const cards = alltime.totalCardsScratched || 0;
         return (
           <div style={{
-            position:"fixed", top:0, left:0, width:"100%", height:"100%",
+            position:"fixed", inset:0,
             background:"rgba(0,0,0,0.94)", zIndex:99990,
             display:"flex", alignItems:"center", justifyContent:"center",
             fontFamily: FONT, padding:"16px",
