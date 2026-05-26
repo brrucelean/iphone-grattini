@@ -1118,6 +1118,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
             padding: "12px 14px", marginBottom: "8px",
             boxShadow: `0 0 18px ${borderCol}66, inset 0 0 16px ${borderCol}18`,
             animation: "pulse 1s infinite",
+            textAlign: "center",
           }}>
             {cornerBrackets(borderCol, 10, 4, false)}
             <div style={{
