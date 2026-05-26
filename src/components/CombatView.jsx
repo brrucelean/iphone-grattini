@@ -12,6 +12,9 @@ import { S } from "../utils/styles.js";
 import { Btn } from "./Btn.jsx";
 import { NailDisplay } from "./NailDisplay.jsx";
 
+// Nomi categoria abbreviati — COMBATTIMENTO è troppo lungo per le card strette
+const CAT_SHORT = { COMBATTIMENTO: "ATTACCO", DIFESA: "DIFESA", DENARO: "DENARO" };
+
 // ─── DEBUG FLAGS (livello modulo — visibili in CombatView e Grattini) ────────
 export const DEBUG_MODE   = false;    // true = tutti gli oggetti
 export const DEBUG_COMBAT = false;    // false / true / "boss"
@@ -31,33 +34,40 @@ export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailS
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    // Base oro solido — niente trasparenza, niente bleeding
+    // Base oro pulito — gradiente caldo, senza rumore eccessivo
     const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0,   "#c49a0a");
-    grad.addColorStop(0.25,"#ffe066");
-    grad.addColorStop(0.5, "#ffd700");
-    grad.addColorStop(0.75,"#e8c000");
-    grad.addColorStop(1,   "#b08000");
+    grad.addColorStop(0,   "#c09008");
+    grad.addColorStop(0.3, "#f0c830");
+    grad.addColorStop(0.55,"#ffe066");
+    grad.addColorStop(0.8, "#e8c000");
+    grad.addColorStop(1,   "#a87800");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Texture: punti bianchi fini
-    ctx.fillStyle = "rgba(255,255,255,0.22)";
-    for (let i = 0; i < 120; i++) {
+    // Noise leggerissimo — quasi invisibile
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    for (let i = 0; i < 55; i++) {
       const x = Math.random() * canvas.width;
       const y = Math.random() * canvas.height;
-      ctx.fillRect(x, y, Math.random() < 0.7 ? 1 : 1.5, Math.random() < 0.7 ? 1 : 1.5);
+      ctx.fillRect(x, y, 1, 1);
     }
-    // Strisce diagonali sottili
-    ctx.globalAlpha = 0.07;
+    // Strisce diagonali sottilissime — appena percettibili
+    ctx.globalAlpha = 0.025;
     ctx.strokeStyle = "#000";
-    ctx.lineWidth = 8;
-    for (let x = -canvas.height; x < canvas.width + canvas.height; x += 18) {
+    ctx.lineWidth = 5;
+    for (let x = -canvas.height; x < canvas.width + canvas.height; x += 26) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + canvas.height, canvas.height); ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    // Hint "GRATTA" in basso
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = "#3a2000";
+    ctx.font = "bold 9px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("G R A T T A", canvas.width / 2, canvas.height - 7);
+    ctx.globalAlpha = 1;
     // Bordo interno scuro
-    ctx.strokeStyle = "rgba(0,0,0,0.3)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
   }, []);
 
@@ -150,14 +160,14 @@ export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailS
             }}>
               {CAT_EMOJI_MAP[cell.category] || "?"}
             </div>
-            {/* Label stampata — effetto embossed su oro */}
+            {/* Label stampata — abbreviata per evitare overflow nelle card strette */}
             <div style={{
-              fontSize:"12px", fontWeight:"900", letterSpacing:"2.5px",
+              fontSize:"11px", fontWeight:"900", letterSpacing:"1.8px",
               color: "#4a3000",
               textShadow:"0 1px 0 rgba(255,255,200,0.4), 0 -1px 0 rgba(0,0,0,0.3)",
               textTransform:"uppercase",
             }}>
-              {cell.category}
+              {CAT_SHORT[cell.category] || cell.category}
             </div>
           </>
         )}
@@ -1198,30 +1208,55 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
       {/* ── REGOLE ── */}
       {phase === "rules" && (
         <div>
-          {/* Vintage header neon */}
-          <div style={{textAlign:"center", marginBottom:"10px"}}>
+          {/* Header drammatico — gradient + badge tipo */}
+          <div style={{
+            textAlign:"center", marginBottom:"12px",
+            padding:"12px 8px 10px",
+            background: enemy.isBoss
+              ? `linear-gradient(180deg, #1a0000 0%, #0a0005 100%)`
+              : `linear-gradient(180deg, #0d0a00 0%, #06050a 100%)`,
+            border:`1px solid ${enemy.isBoss ? C.red : C.orange}44`,
+            borderRadius:"0 0 4px 4px",
+            position:"relative", overflow:"hidden",
+          }}>
+            {/* Tipo badge */}
             <div style={{
               display:"inline-block",
-              background: enemy.isBoss ? C.red : C.orange, color:"#000",
-              fontSize:"10px", fontWeight:"bold", letterSpacing:"3px",
-              padding:"3px 14px", marginBottom:"8px",
-              boxShadow:`0 0 10px ${enemy.isBoss ? C.red : C.orange}aa`,
+              background: enemy.isBoss ? C.red : enemy.isMiniboss ? C.magenta : C.orange,
+              color:"#000", fontSize:"9px", fontWeight:"bold", letterSpacing:"3px",
+              padding:"2px 12px", marginBottom:"8px",
+              boxShadow:`0 0 12px ${enemy.isBoss ? C.red : C.orange}aa`,
             }}>
               ★ {enemy.isBoss ? "BOSS FIGHT" : enemy.isMiniboss ? "MINI BOSS" : "SFIDA"} ★
             </div>
+            {/* Nome nemico */}
             <div style={{
-              color:C.red, fontWeight:"bold", fontSize:"20px",
-              letterSpacing:"3px", fontFamily:FONT,
-              textShadow:`0 0 12px ${C.red}, 0 0 24px ${C.red}55`,
+              color: enemy.isBoss ? C.red : C.orange,
+              fontWeight:"bold", fontSize:"22px",
+              letterSpacing:"2px", fontFamily:FONT,
+              textShadow:`0 0 14px ${enemy.isBoss ? C.red : C.orange}, 0 0 28px ${enemy.isBoss ? C.red : C.orange}44`,
+              marginBottom:"2px",
             }}>
-              ⚔ GRATTA & LOTTA ⚔
+              {enemyIcon} {enemy.name}
             </div>
-          </div>
-          <div style={{
-            color:C.orange, fontSize:"15px", marginBottom:"14px",
-            textShadow:`0 0 6px ${C.orange}66`,
-          }}>
-            {enemyIcon} <b>{enemy.name}</b> ti sfida!
+            {/* Sottotitolo */}
+            <div style={{
+              color:C.dim, fontSize:"11px", letterSpacing:"1.5px",
+              textTransform:"uppercase",
+            }}>
+              ⚔ GRATTA &amp; LOTTA — {maxRounds} round
+            </div>
+            {/* Wallet bonus badge */}
+            {walletBonus > 0 && (
+              <div style={{
+                display:"inline-block", marginTop:"8px",
+                background:"#001808", border:`1px solid ${C.green}66`,
+                borderRadius:"2px", padding:"3px 10px",
+                color:C.green, fontSize:"10px", fontWeight:"bold",
+              }}>
+                💰 Porti €{walletBonus} in campo
+              </div>
+            )}
           </div>
           <div style={{...S.panel, textAlign:"left", background:"#050510", borderColor:C.dim+"66", padding:"12px"}}>
             <div style={{color:C.cyan, fontWeight:"bold", marginBottom:"10px", fontSize:"13px"}}>📜 Come funziona:</div>
@@ -1244,11 +1279,6 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
               ⚠ Ogni <strong>3 grattate</strong> la tua unghia si degrada.<br/>
               Sconfitta: perdi la differenza in €.
             </div>
-            {walletBonus > 0 && (
-              <div style={{marginTop:"6px", background:"#0a1a0a", borderRadius:"0", padding:"7px 10px", fontSize:"11px", color:C.green}}>
-                💰 Porti €{walletBonus} dal portafoglio (30% del tuo cash, max €150)
-              </div>
-            )}
             {enemy.isMiniboss && (
               <div style={{marginTop:"6px", background:"#1a0a1a", border:`1px solid ${C.magenta}66`, borderRadius:"0", padding:"8px 10px", fontSize:"11px", color:C.magenta}}>
                 💀 <strong>SFIDA 3-COMBO</strong> — i Mini-Boss amano le combo.<br/>
@@ -1348,30 +1378,50 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
       {/* ── GRATTA 3 DA 9 → COMBATTI ── */}
       {phase === "select" && (
         <div>
-          {/* Vintage round indicator */}
-          <div style={{textAlign:"center", marginBottom:"6px"}}>
+          {/* Header round — compatto, con progress dots */}
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            marginBottom:"8px",
+            padding:"6px 10px",
+            background:`linear-gradient(135deg, #1a0000 0%, #0a0010 100%)`,
+            border:`1px solid ${C.red}44`,
+            borderRadius:"4px 0 4px 0",
+          }}>
+            {/* Round badge */}
             <div style={{
-              display:"inline-block",
-              background: C.red, color:"#000",
-              fontSize:"10px", fontWeight:"bold", letterSpacing:"3px",
-              padding:"2px 12px",
-              boxShadow:`0 0 8px ${C.red}99`,
+              background:`linear-gradient(135deg, ${C.red} 0%, #8a0000 100%)`,
+              color:"#fff", fontSize:"10px", fontWeight:"bold", letterSpacing:"2px",
+              padding:"3px 10px",
+              boxShadow:`0 0 10px ${C.red}66`,
             }}>
-              ★ ROUND {round}/{maxRounds} ★
+              ⚔ ROUND {round}/{maxRounds}
             </div>
+            {/* "GRATTA LE CARTE" central */}
             <div style={{
-              color:C.red, fontWeight:"bold", fontSize:"13px",
-              marginTop:"4px", letterSpacing:"1px",
-              textShadow:`0 0 6px ${C.red}88`,
+              color:C.red, fontWeight:"bold", fontSize:"11px",
+              letterSpacing:"1px", textShadow:`0 0 6px ${C.red}66`,
             }}>
-              ⚔ GRATTA LE CARTE ⚔
+              GRATTA 3
+            </div>
+            {/* Progress dots */}
+            <div style={{display:"flex", gap:"5px", alignItems:"center"}}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width:"9px", height:"9px",
+                  borderRadius:"50%",
+                  background: i < scratchedHandIdxs.length ? C.gold : "#2a2a2a",
+                  border:`1px solid ${i < scratchedHandIdxs.length ? C.gold : "#444"}`,
+                  boxShadow: i < scratchedHandIdxs.length ? `0 0 6px ${C.gold}88` : "none",
+                  transition:"all 0.18s",
+                }} />
+              ))}
             </div>
           </div>
-          <div style={{color:C.dim, fontSize:"11px", marginBottom:"12px"}}>
-            <span style={{color:C.gold}}>9 carte</span> nascoste — grattane{" "}
-            <span style={{color:C.cyan}}>3</span>: quelle <em>sono</em> le tue carte
-            {scratchedHandIdxs.length > 0 && (
-              <span style={{color:C.gold}}> ({scratchedHandIdxs.length}/3 grattate)</span>
+          <div style={{color:C.dim, fontSize:"11px", marginBottom:"10px"}}>
+            <span style={{color:C.gold}}>9 carte</span> coperte — grattane{" "}
+            <span style={{color:C.cyan}}>3</span>: solo quelle entrano in gioco
+            {scratchedHandIdxs.length === 3 && (
+              <span style={{color:C.gold, fontWeight:"bold"}}> — analisi in corso…</span>
             )}
           </div>
           {enemy.isMiniboss && (
@@ -1432,15 +1482,15 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
                     animation: variantAnim,
                     zIndex: v ? 3 : 1,
                   }}>
-                    {/* Barra categoria in alto */}
+                    {/* Barra categoria in alto — nome abbreviato per evitare overflow */}
                     <div style={{
                       position:"absolute", top:0, left:0, right:0,
                       background:col+"22", borderBottom:`1px solid ${col}44`,
                       padding:"2px 0", fontSize:"8px", fontWeight:"bold",
-                      color:col, letterSpacing:"1.5px", textTransform:"uppercase",
+                      color:col, letterSpacing:"1px", textTransform:"uppercase",
                       zIndex: 2,
                     }}>
-                      {CAT_EMOJI_MAP[cell.category]} {cell.category}
+                      {CAT_EMOJI_MAP[cell.category]} {CAT_SHORT[cell.category] || cell.category}
                     </div>
                     {/* Shimmer iridescente per FOIL/ORO/MULTI — striscia diagonale che scorre */}
                     {(vKey === "FOIL" || vKey === "ORO" || vKey === "MULTI") && (
@@ -1535,13 +1585,16 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
             })}
           </div>
           {scratchedHandIdxs.length < 3 && (
-            <div style={{fontSize:"11px", color:C.dim, marginTop:"4px"}}>
-              Gratta ancora {3 - scratchedHandIdxs.length} cart{3 - scratchedHandIdxs.length === 1 ? "a" : "e"}...
+            <div style={{fontSize:"10px", color:C.dim, marginTop:"5px"}}>
+              {3 - scratchedHandIdxs.length === 3
+                ? "Gratta 3 carte per giocare"
+                : `Ancora ${3 - scratchedHandIdxs.length} cart${3 - scratchedHandIdxs.length === 1 ? "a" : "e"}…`}
             </div>
           )}
           {scratchedHandIdxs.length === 3 && (
-            <div style={{fontSize:"12px", color:C.gold, marginTop:"4px"}}>
-              ⚡ Analizzando le tue carte...
+            <div style={{fontSize:"11px", color:C.gold, marginTop:"5px", fontWeight:"bold",
+              animation:"pulse 0.6s ease-in-out infinite"}}>
+              ⚡ CARTE SELEZIONATE — risoluzione in corso…
             </div>
           )}
 
@@ -1620,15 +1673,31 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
 
         return (
           <div>
-            {/* Header round */}
-            <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", marginBottom:"8px"}}>
-              <div style={{color:C.red, fontWeight:"bold", fontSize:"13px"}}>⚔ Round {round}/{maxRounds}</div>
-              {roundMult > 1 && (
-                <div style={{background:"#1a0a00", border:`1px solid ${C.orange}`, borderRadius:"0",
-                  padding:"2px 8px", fontSize:"11px", color:C.orange, fontWeight:"bold"}}>
+            {/* Header round risoluzione */}
+            <div style={{
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              marginBottom:"8px", padding:"5px 10px",
+              background:`linear-gradient(135deg, #1a0000 0%, #0a0010 100%)`,
+              border:`1px solid ${C.red}33`,
+            }}>
+              <div style={{
+                background:`linear-gradient(135deg, ${C.red} 0%, #8a0000 100%)`,
+                color:"#fff", fontSize:"10px", fontWeight:"bold", letterSpacing:"2px",
+                padding:"2px 8px",
+              }}>
+                ⚔ ROUND {round}/{maxRounds}
+              </div>
+              <div style={{color:C.red, fontSize:"12px", fontWeight:"bold", letterSpacing:"1px"}}>
+                RISOLUZIONE
+              </div>
+              {roundMult > 1 ? (
+                <div style={{
+                  background:"#1a0a00", border:`1px solid ${C.orange}88`,
+                  padding:"2px 7px", fontSize:"10px", color:C.orange, fontWeight:"bold",
+                }}>
                   ×{roundMult.toFixed(1)} POSTA
                 </div>
-              )}
+              ) : <div style={{width:"60px"}} />}
             </div>
 
             {/* Carte in parallelo: player sinistra, enemy destra */}
