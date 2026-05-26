@@ -1,5 +1,5 @@
 import { C, MAX_ITEMS } from "../data/theme.js";
-import { CARD_TYPES } from "../data/cards.js";
+import { CARD_TYPES, CARD_BALANCE } from "../data/cards.js";
 import { ITEM_DEFS, GRATTATORE_DEFS } from "../data/items.js";
 import { BIOME_MODIFIERS } from "../data/biomes.js";
 import { generateCard } from "../utils/card.js";
@@ -13,13 +13,17 @@ export function useShopHandlers({ player, updatePlayer, addLog, setGameStats, se
     const type = CARD_TYPES.find(t => t.id === cardId);
     if (!type) return;
     const discount = (player.shopDiscountMeta || 0) + biomeShopDiscount;
-    const finalCost = Math.max(0, Math.round(type.cost * (1 - discount) * 100) / 100);
+    // Cedola Monopolio: carte tier 3+ costano ×highCardCostMeta
+    const cardTier = CARD_BALANCE[cardId]?.tier || 1;
+    const highCostMult = ((player.highCardCostMeta || 1) > 1 && cardTier >= 3) ? (player.highCardCostMeta || 1) : 1;
+    const finalCost = Math.max(0, Math.round(type.cost * (1 - discount) * highCostMult * 100) / 100);
     if (player.money < finalCost) return;
     const riggedBonus = (cardId === "doppioOnulla" && hasRelic(player, "riggedDice")) ? 0.15 : 0;
     const card = {...generateCard(cardId, effectiveFortune, riggedBonus), owned: true};
     updatePlayer(p => ({...p, money: roundMoney(p.money - finalCost), scratchCards: [...p.scratchCards, card]}));
     setGameStats(s => ({...s, moneySpent: (s.moneySpent || 0) + finalCost}));
-    addLog(`Comprato: ${type.name} (€${finalCost}${discount > 0 ? ` [-${Math.round(discount*100)}%]` : ""})`, C.green);
+    const monopolioSuffix = highCostMult > 1 ? ` [×${highCostMult} MONOPOLIO]` : "";
+    addLog(`Comprato: ${type.name} (€${finalCost}${discount > 0 ? ` [-${Math.round(discount*100)}%]` : ""}${monopolioSuffix})`, C.green);
     if (setItemFoundModal) setItemFoundModal({
       emoji: type.emoji || "🎟️", name: type.name,
       desc: `${type.desc}\nPagato €${finalCost}${discount > 0 ? ` (sconto -${Math.round(discount*100)}%)` : ""} · Max vincita: €${type.maxPrize}`,

@@ -154,11 +154,21 @@ export function useScratchHandlers({
       const preBiomePrize = hasClipVirale ? streamerMultiplied * 2 : streamerMultiplied;
       // Modificatore bioma 2 (Grattanapoli): +10% sulle vincite grattate
       const biomePrizeBoost = BIOME_MODIFIERS[currentBiome]?.prizeBoost || 0;
-      const basePrize = biomePrizeBoost > 0
+      let basePrize = biomePrizeBoost > 0
         ? Math.round(preBiomePrize * (1 + biomePrizeBoost))
         : preBiomePrize;
       if (biomePrizeBoost > 0 && basePrize > preBiomePrize) {
         addLog(`🌋 Vento del Vesuvio: +€${basePrize - preBiomePrize} bonus bioma!`, BIOME_MODIFIERS[currentBiome]?.emoji ? "#ff8800" : C.gold);
+      }
+      // Cedola Monopolio: biglietti tier-1 danno ×tier1PrizeBoostMeta
+      {
+        const _cid = scratchingCard?.id || scratchingCard?.typeId;
+        const t1Boost = player.tier1PrizeBoostMeta || 1;
+        if (t1Boost > 1 && CARD_BALANCE[_cid]?.tier === 1) {
+          const boosted = Math.round(basePrize * t1Boost);
+          addLog(`💸 MONOPOLIO: biglietto tier-1 ×${t1Boost}! +€${boosted - basePrize} bonus cedola`, C.gold);
+          basePrize = boosted;
+        }
       }
       if (isStreamerLive) {
         addLog(`🔥 CLIP VIRALE! La chat impazzisce! €${result.prize} → €${streamerMultiplied} (x1.5 LIVE)!`, C.gold);
