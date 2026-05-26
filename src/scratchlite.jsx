@@ -487,6 +487,8 @@ export default function Grattini() {
         }
         /* ── SCREEN TRANSITION ── */
         @keyframes screenFadeIn { 0% { opacity:0; transform:scale(0.97); } 100% { opacity:1; transform:scale(1); } }
+        /* ── MAP SNAP SCROLL ── */
+        .map-snap-scroll { scroll-snap-type: y mandatory; }
         @keyframes screenFlash  { 0% { opacity:1; } 40% { opacity:1; } 100% { opacity:0; } }
         /* ── GAME OVER EPIC ── */
         @keyframes gameOverFlicker {
@@ -1864,7 +1866,11 @@ export default function Grattini() {
 
       {/* ═══ MAP ═══ */}
       {screen === "map" && player && map && (
-        <div style={{maxWidth:"1000px", width:"100%"}}>
+        <div style={{
+          flex:1, minHeight:0, width:"100%", maxWidth:"1000px",
+          display:"flex", flexDirection:"column", overflow:"hidden",
+        }}>
+          {/* Mappa — occupa tutto lo spazio disponibile */}
           <MapView
             map={map}
             currentRow={currentRow}
@@ -1875,48 +1881,83 @@ export default function Grattini() {
             playerFortuna={effectiveFortune || player.fortune || 0}
           />
 
-          {/* Quick inventory */}
+          {/* Striscia inventario compatta — flexShrink:0, NON toglie spazio alla mappa */}
           {(player.items.length > 0 || player.grattatori.length > 0) && (
-            <div style={{...S.panel}}>
-              {player.grattatori.length > 0 && (
-                <>
-                  <div style={{...S.h3, color:C.cyan}}>🔧 Grattatori</div>
-                  <div style={{display:"flex", flexWrap:"wrap", gap:"4px", marginBottom:"6px"}}>
-                    {player.grattatori.map((g, idx) => {
-                      const def = GRATTATORE_DEFS[g.id];
-                      return (
-                        <Tooltip key={"g"+idx} text={def ? `${def.desc} · ${g.usesLeft} uso/i rimasti` : g.name}>
-                          <Btn onClick={() => equipGrattatore(idx)}
-                            variant={player.equippedGrattatore?.inventoryIdx === idx ? "gold" : "normal"}
-                            style={{fontSize:"11px"}}>
-                            {g.emoji} {g.name} ({g.usesLeft})
-                          </Btn>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                </>
+            <div style={{
+              flexShrink:0,
+              display:"flex", alignItems:"center", gap:"6px",
+              padding:"5px 8px",
+              background:"#06060e",
+              borderTop:`1px solid ${C.cyan}22`,
+              overflowX:"auto", overflowY:"hidden",
+              WebkitOverflowScrolling:"touch",
+            }}>
+              {/* Grattatori */}
+              {player.grattatori.map((g, idx) => {
+                const def = GRATTATORE_DEFS[g.id];
+                const isEquipped = player.equippedGrattatore?.inventoryIdx === idx;
+                return (
+                  <Tooltip key={"g"+idx} text={def ? `${def.desc} · ${g.usesLeft} uso/i` : g.name}>
+                    <button
+                      onClick={() => equipGrattatore(idx)}
+                      style={{
+                        flexShrink:0,
+                        display:"flex", alignItems:"center", gap:"3px",
+                        background: isEquipped ? `${C.cyan}22` : "#0a0a18",
+                        border:`1px solid ${isEquipped ? C.cyan : "#333355"}`,
+                        color: isEquipped ? C.cyan : C.dim,
+                        padding:"3px 7px",
+                        fontSize:"10px", fontFamily:FONT,
+                        cursor:"pointer",
+                        boxShadow: isEquipped ? `0 0 8px ${C.cyan}55` : "none",
+                        letterSpacing:"0.5px",
+                        WebkitTapHighlightColor:"transparent",
+                      }}
+                    >
+                      <span style={{fontSize:"13px"}}>{g.emoji}</span>
+                      <span style={{fontSize:"9px"}}>{g.name}</span>
+                      <span style={{
+                        background: isEquipped ? C.cyan : "#222244",
+                        color: isEquipped ? "#000" : C.dim,
+                        fontSize:"8px", padding:"0 3px",
+                        fontWeight:"bold",
+                      }}>{g.usesLeft}</span>
+                    </button>
+                  </Tooltip>
+                );
+              })}
+              {/* Divisore */}
+              {player.grattatori.length > 0 && player.items.length > 0 && (
+                <div style={{width:"1px", height:"20px", background:`${C.dim}33`, flexShrink:0}}/>
               )}
-              {player.items.length > 0 && (
-                <>
-                  <div style={S.h3}>💊 Consumabili</div>
-                  <div style={{display:"flex", flexWrap:"wrap", gap:"4px"}}>
-                    {player.items.map((itemId, idx) => {
-                      const item = ITEM_DEFS[itemId];
-                      return item ? (
-                        <Tooltip key={idx} text={item.desc}>
-                          <Btn onClick={() => useItem(idx)} style={{fontSize:"11px"}}>
-                            {item.emoji} {item.name}
-                          </Btn>
-                        </Tooltip>
-                      ) : null;
-                    })}
-                  </div>
-                </>
-              )}
+              {/* Consumabili */}
+              {player.items.map((itemId, idx) => {
+                const item = ITEM_DEFS[itemId];
+                return item ? (
+                  <Tooltip key={idx} text={item.desc}>
+                    <button
+                      onClick={() => useItem(idx)}
+                      style={{
+                        flexShrink:0,
+                        display:"flex", alignItems:"center", gap:"3px",
+                        background:"#0a0a12",
+                        border:`1px solid ${C.green}44`,
+                        color: C.green,
+                        padding:"3px 7px",
+                        fontSize:"10px", fontFamily:FONT,
+                        cursor:"pointer",
+                        letterSpacing:"0.5px",
+                        WebkitTapHighlightColor:"transparent",
+                      }}
+                    >
+                      <span style={{fontSize:"13px"}}>{item.emoji}</span>
+                      <span style={{fontSize:"9px", color:C.dim}}>{item.name}</span>
+                    </button>
+                  </Tooltip>
+                ) : null;
+              })}
             </div>
           )}
-
         </div>
       )}
 

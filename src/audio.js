@@ -93,6 +93,11 @@ export const AudioEngine = (() => {
       [330,220,150].forEach((f,i) => setTimeout(()=>playTone(f,0.25,"sawtooth",0.1), i*120));
     },
     click: () => playTone(600, 0.04, "square", 0.06),
+    // Scatto meccanico della mappa — "slot reel stop"
+    mapTick: () => {
+      playTone(300, 0.022, "square", 0.11);
+      playTone(620, 0.012, "square", 0.05, 0.008);
+    },
     dialogueTick: () => playTone(520 + Math.random()*160, 0.018, "square", 0.018),
     cash: () => {
       // Ka-ching! coin drop + register bell

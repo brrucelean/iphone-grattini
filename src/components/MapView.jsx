@@ -3,9 +3,11 @@ import { C, FONT } from "../data/theme.js";
 import { NODE_ICONS, NODE_TOOLTIPS } from "../data/map.js";
 import { BIOMES, BIOME_MODIFIERS } from "../data/biomes.js";
 import { Tooltip } from "./Tooltip.jsx";
+import { AudioEngine } from "../audio.js";
+import { Haptics } from "../utils/haptics.js";
 
 // ─── COSTANTI LAYOUT ─────────────────────────────────────────────
-const ROW_H = 96;   // altezza per riga — leggermente più alta per leggibilità
+const ROW_H = 110;   // altezza per riga — ottimizzata iPhone 16 Pro (touch target ≥44pt)
 const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
 const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
 
@@ -20,23 +22,72 @@ const LEGEND = [
 export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachableNodes, currentBiome = 0, playerFortuna = 0 }) {
   const scrollRef = useRef(null);
 
-  // Auto-scroll centrato sulla riga corrente — ogni volta che cambia currentRow o map
+  // ── Scroll snap a scatti con suoni ────────────────────────────
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Centro: la riga corrente deve stare al centro dell'area visibile
-    const targetY = currentRow * ROW_H - (el.clientHeight / 2) + (ROW_H / 2);
+    let snapTimer = null;
+    let rafId = null;
+    let lastTickedRow = -1;
+
+    const checkRowCross = () => {
+      const row = Math.floor(el.scrollTop / ROW_H + 0.1);
+      if (row !== lastTickedRow) {
+        AudioEngine.mapTick();
+        Haptics.tap();
+        lastTickedRow = row;
+      }
+    };
+
+    const onScroll = () => {
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          checkRowCross();
+          rafId = null;
+        });
+      }
+      clearTimeout(snapTimer);
+      snapTimer = setTimeout(() => {
+        const snapRow = Math.round(el.scrollTop / ROW_H);
+        const targetY = snapRow * ROW_H;
+        if (Math.abs(el.scrollTop - targetY) > 6) {
+          el.scrollTo({ top: targetY, behavior: "smooth" });
+        }
+      }, 120);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      clearTimeout(snapTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [map]);
+
+  // ── Auto-scroll centrato con cascade tick ─────────────────────
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const targetY = Math.max(0, currentRow * ROW_H - el.clientHeight / 2 + ROW_H / 2);
+    // Cascade di scatti sul percorso
+    const fromRow = Math.round(el.scrollTop / ROW_H);
+    const rowDist = Math.abs(fromRow - currentRow);
+    const ticks = Math.min(rowDist, 5);
+    for (let i = 0; i < ticks; i++) {
+      setTimeout(() => AudioEngine.mapTick(), i * 70 + 30);
+    }
     el.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
   }, [currentRow, map]);
 
   const rowsCount = map.rows.length || 1;
   const totalH    = rowsCount * ROW_H;
-  const vw        = typeof window !== "undefined" ? window.innerWidth : 900;
-  const W         = Math.min(860, vw - 16);
+  const vw        = typeof window !== "undefined" ? window.innerWidth : 393;
+  const W         = Math.min(780, vw - 8);
 
+  // Nodi: dimensioni ottimizzate per iPhone 16 Pro touch target
   const maxNodesPerRow = map.rows.reduce((acc, r) => Math.max(acc, r.length), 1);
-  const NW = Math.min(84, Math.floor(W / Math.max(1, maxNodesPerRow)));
-  const NH = Math.round(NW * 66 / 84);
+  const NW = Math.min(92, Math.max(64, Math.floor(W / Math.max(1, maxNodesPerRow)) - 10));
+  const NH = Math.round(NW * 0.72);
 
   const nodePos = useMemo(() => {
     const pos = {};
@@ -66,7 +117,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
   }, [map]);
 
   const edgeColor = (toId, isActive, isPast, isShortcut) => {
-    if (isPast)    return "#cc9900";   // trail visitato — ambra scuro
+    if (isPast)    return "#cc9900";
     if (!isActive) return "#1a1a2e";
     if (isShortcut) return C.magenta;
     const n = map.rows.flat().find(n => n.id === toId);
@@ -93,115 +144,175 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
       border:`2px solid ${biomeColor}`,
       background:"#05050f",
       position:"relative",
-      boxShadow:`4px 4px 0 #000000, 0 0 28px ${biomeColor}44`,
+      boxShadow:`0 0 0 1px #000, 0 0 32px ${biomeColor}33`,
       flex:1, minHeight:0, overflow:"hidden",
     }}>
 
-      {/* ── keyframes inline per animazioni mappa ── */}
+      {/* ── keyframes ── */}
       <style>{`
         @keyframes mapCurrentRowPulse {
-          0%,100% { background: ${biomeColor}18; box-shadow: inset 0 0 0 0 ${biomeColor}00; }
-          50%      { background: ${biomeColor}28; box-shadow: inset 0 2px 0 0 ${biomeColor}66, inset 0 -2px 0 0 ${biomeColor}66; }
+          0%,100% { background:${biomeColor}14; }
+          50%      { background:${biomeColor}26; }
         }
         @keyframes mapNodeReachable {
-          0%,100% { box-shadow: 0 0 10px currentColor; }
-          50%      { box-shadow: 0 0 22px currentColor, 0 0 6px currentColor; }
+          0%,100% { box-shadow:0 0 12px currentColor,0 0 4px currentColor inset; }
+          50%      { box-shadow:0 0 26px currentColor,0 0 10px currentColor inset; }
         }
         @keyframes mapYouAreHere {
-          0%,100% { opacity:1; transform:scale(1); }
-          50%      { opacity:0.5; transform:scale(1.3); }
+          0%,100% { opacity:1; transform:translateX(0) scaleX(1); }
+          50%      { opacity:0.6; transform:translateX(3px) scaleX(1.15); }
         }
         @keyframes mapTrailFlow {
-          0%   { stroke-dashoffset: 24; }
-          100% { stroke-dashoffset: 0; }
+          0%   { stroke-dashoffset:24; }
+          100% { stroke-dashoffset:0; }
         }
         @keyframes bossGlow {
-          0%,100% { box-shadow: 0 0 24px #ff2244ee, 0 0 48px #ff224466, 3px 3px 0 #000; }
-          50%      { box-shadow: 0 0 36px #ff2244ff, 0 0 72px #ff224488, 3px 3px 0 #000; }
+          0%,100% { box-shadow:0 0 20px #ff2244ee,0 0 40px #ff224455,3px 3px 0 #000; }
+          50%      { box-shadow:0 0 32px #ff2244ff,0 0 60px #ff224477,3px 3px 0 #000; }
         }
         @keyframes slotGlow {
-          0%,100% { box-shadow: 0 0 8px #cc9900cc, 3px 3px 0 #000; }
-          50%      { box-shadow: 0 0 20px #ffcc00ee, 0 0 36px #ffcc0044, 3px 3px 0 #000; }
+          0%,100% { box-shadow:0 0 10px #cc9900cc,3px 3px 0 #000; }
+          50%      { box-shadow:0 0 22px #ffcc00ee,0 0 40px #ffcc0033,3px 3px 0 #000; }
         }
+        @keyframes mapRowIn {
+          from { opacity:0; transform:translateY(6px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes mapHeadPulse {
+          0%,100% { box-shadow:inset 0 0 0 0 ${biomeColor}00; }
+          50%      { box-shadow:inset 0 -2px 0 0 ${biomeColor}66; }
+        }
+        @keyframes progressShimmer {
+          0%   { background-position:200% 0; }
+          100% { background-position:-200% 0; }
+        }
+        .map-node-active:active { transform:scale(0.94)!important; }
       `}</style>
 
-      {/* ── HEADER COMPATTO ─────────────────────────────────────── */}
+      {/* ══ HEADER FISSO ══════════════════════════════════════════ */}
       <div style={{
         flexShrink:0,
-        padding:"8px 12px",
-        background:`${biomeColor}1a`,
-        borderBottom:`2px solid ${biomeColor}`,
-        display:"flex", alignItems:"center", gap:"10px",
+        background:`linear-gradient(180deg, ${biomeColor}22 0%, ${biomeColor}0a 100%)`,
+        borderBottom:`2px solid ${biomeColor}88`,
+        animation:"mapHeadPulse 3s ease-in-out infinite",
+        padding:"0",
       }}>
-        <span style={{fontSize:"24px", flexShrink:0, filter:`drop-shadow(0 0 6px ${biomeColor})`}}>{biomeGlyph}</span>
+        {/* riga superiore: bioma info + progresso */}
+        <div style={{
+          display:"flex", alignItems:"center", gap:"10px",
+          padding:"8px 12px 6px",
+        }}>
+          {/* Glyph */}
+          <span style={{
+            fontSize:"28px", flexShrink:0,
+            filter:`drop-shadow(0 0 8px ${biomeColor}) drop-shadow(0 0 16px ${biomeColor}66)`,
+            lineHeight:1,
+          }}>{biomeGlyph}</span>
 
-        <div style={{flex:1, minWidth:0}}>
+          <div style={{flex:1, minWidth:0}}>
+            {/* Badge bioma */}
+            <div style={{
+              display:"inline-flex", alignItems:"center", gap:"5px",
+              marginBottom:"3px",
+            }}>
+              <span style={{
+                background: biomeColor, color:"#000",
+                fontFamily:FONT, fontWeight:"bold",
+                fontSize:"7px", letterSpacing:"2px",
+                padding:"1px 6px",
+                boxShadow:`0 0 6px ${biomeColor}`,
+              }}>BIOMA {currentBiome + 1}/4</span>
+              <span style={{
+                background:`${biomeColor}22`,
+                border:`1px solid ${biomeColor}55`,
+                color:biomeColor, fontSize:"7px",
+                fontFamily:FONT, letterSpacing:"1px",
+                padding:"1px 5px",
+              }}>RIGA {progressRow}/{totalRows}</span>
+            </div>
+            {/* Nome bioma */}
+            <div style={{
+              color: biomeColor, fontFamily:FONT, fontWeight:"bold",
+              fontSize:"15px", letterSpacing:"2.5px",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              textShadow:`0 0 12px ${biomeColor}bb, 0 0 24px ${biomeColor}44`,
+              lineHeight:1.1,
+            }}>{biomeName.toUpperCase()}</div>
+            {/* Boss pill */}
+            <div style={{display:"flex", alignItems:"center", gap:"4px", marginTop:"3px"}}>
+              <span style={{
+                background:`${C.red}cc`, color:"#fff",
+                fontFamily:FONT, fontWeight:"bold",
+                fontSize:"7px", letterSpacing:"1px",
+                padding:"1px 5px",
+                boxShadow:`0 0 6px ${C.red}88`,
+              }}>BOSS</span>
+              <span style={{
+                color:`${C.red}dd`, fontSize:"10px",
+                fontFamily:FONT, fontWeight:"bold",
+                letterSpacing:"0.5px",
+                textShadow:`0 0 6px ${C.red}88`,
+              }}>{biomeBoss.toUpperCase()}</span>
+            </div>
+          </div>
+
+          {/* Progress block */}
+          <div style={{flexShrink:0, textAlign:"right", minWidth:"64px"}}>
+            <div style={{
+              width:"64px", height:"8px",
+              background:"#111",
+              border:`1px solid ${biomeColor}55`,
+              position:"relative", overflow:"hidden",
+              marginBottom:"3px",
+            }}>
+              <div style={{
+                position:"absolute", inset:0,
+                width:`${progressPct}%`,
+                background:`linear-gradient(90deg, ${biomeColor}88, ${biomeColor}, ${C.red})`,
+                backgroundSize:"200% 100%",
+                animation:`progressShimmer 2s linear infinite`,
+                transition:"width 0.5s",
+              }}/>
+              {/* scanline */}
+              <div style={{
+                position:"absolute", inset:0,
+                backgroundImage:"repeating-linear-gradient(90deg, transparent 0, transparent 3px, rgba(0,0,0,0.25) 3px, rgba(0,0,0,0.25) 4px)",
+                pointerEvents:"none",
+              }}/>
+            </div>
+            <div style={{
+              color:C.red, fontSize:"8px",
+              fontFamily:FONT, letterSpacing:"1px",
+              textShadow:`0 0 4px ${C.red}99`,
+            }}>→ BOSS</div>
+          </div>
+        </div>
+
+        {/* Modificatore bioma */}
+        {BIOME_MODIFIERS[currentBiome] && (
           <div style={{
-            display:"inline-block",
-            background: biomeColor, color:"#000",
-            fontFamily:FONT, fontWeight:"bold",
-            fontSize:"7px", letterSpacing:"2px",
-            padding:"1px 6px", marginBottom:"2px",
-          }}>BIOMA {currentBiome + 1}/4</div>
-          <div style={{
-            color: biomeColor, fontFamily:FONT, fontWeight:"bold",
-            fontSize:"14px", letterSpacing:"2px",
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-            textShadow:`0 0 10px ${biomeColor}99`,
-          }}>{biomeName.toUpperCase()}</div>
-          <div style={{display:"flex", alignItems:"center", gap:"5px", marginTop:"2px"}}>
-            <span style={{
-              background:C.red, color:"#fff",
-              fontFamily:FONT, fontWeight:"bold",
-              fontSize:"7px", letterSpacing:"1px",
-              padding:"1px 5px", boxShadow:`0 0 5px ${C.red}aa`,
-            }}>BOSS</span>
-            <span style={{color:C.red, fontSize:"10px", fontFamily:FONT, fontWeight:"bold", letterSpacing:"0.5px"}}>
-              {biomeBoss.toUpperCase()}
+            display:"flex", alignItems:"center", gap:"6px",
+            padding:"4px 12px",
+            borderTop:`1px solid ${biomeColor}22`,
+            background:`${biomeColor}08`,
+            fontSize:"10px", fontFamily:FONT,
+          }}>
+            <span style={{fontSize:"13px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
+            <span style={{color:biomeColor, fontWeight:"bold", letterSpacing:"1px", flexShrink:0}}>
+              {BIOME_MODIFIERS[currentBiome].label}
+            </span>
+            <span style={{color:`${biomeColor}66`, flexShrink:0}}>—</span>
+            <span style={{color:"#aaaacc", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+              {BIOME_MODIFIERS[currentBiome].desc}
             </span>
           </div>
-        </div>
-
-        <div style={{flexShrink:0, textAlign:"right"}}>
-          <div style={{color:C.dim, fontSize:"9px", fontFamily:FONT, letterSpacing:"1px", marginBottom:"4px"}}>
-            <span style={{color:biomeColor, fontWeight:"bold"}}>{progressRow}</span>
-            <span style={{color:"#444"}}>/</span>
-            <span>{totalRows}</span>
-          </div>
-          <div style={{width:"72px", height:"7px", background:"#111", border:`2px solid ${biomeColor}66`, position:"relative"}}>
-            <div style={{
-              position:"absolute", inset:0,
-              width:`${progressPct}%`,
-              background:`linear-gradient(90deg, ${biomeColor}, ${C.red})`,
-              boxShadow:`0 0 6px ${biomeColor}`,
-              transition:"width 0.5s",
-            }}/>
-          </div>
-          <div style={{color:C.red, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px", marginTop:"2px", textShadow:`0 0 4px ${C.red}99`}}>→ BOSS</div>
-        </div>
+        )}
       </div>
 
-      {/* Modificatore bioma */}
-      {BIOME_MODIFIERS[currentBiome] && (
-        <div style={{
-          flexShrink:0,
-          display:"flex", alignItems:"center", gap:"6px", flexWrap:"wrap",
-          padding:"5px 12px",
-          background:`${biomeColor}12`,
-          borderBottom:`1px solid ${biomeColor}44`,
-          fontSize:"11px", fontFamily:FONT, letterSpacing:"0.5px",
-          color: biomeColor,
-        }}>
-          <span style={{fontSize:"14px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].emoji}</span>
-          <strong style={{letterSpacing:"1px", flexShrink:0}}>{BIOME_MODIFIERS[currentBiome].label}</strong>
-          <span style={{color: biomeColor+"66", flexShrink:0}}>—</span>
-          <span style={{color:"#c8c8c8", fontWeight:"normal"}}>{BIOME_MODIFIERS[currentBiome].desc}</span>
-        </div>
-      )}
-
-      {/* ── MAPPA SCROLLABILE ───────────────────────────────────── */}
+      {/* ══ AREA MAPPA SCROLLABILE A SCATTI ══════════════════════ */}
       <div
         ref={scrollRef}
+        className="map-snap-scroll"
         style={{
           flex:1, minHeight:0,
           overflowY:"auto", overflowX:"hidden",
@@ -216,52 +327,79 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
           margin:"0 auto",
         }}>
 
-          {/* ── HIGHLIGHT RIGA CORRENTE (pulsante) ──────────────── */}
+          {/* ── Snap target invisibili per ogni riga ─────────────── */}
+          {map.rows.map((_, rIdx) => (
+            <div key={`snap-${rIdx}`} style={{
+              position:"absolute",
+              left:0, right:0,
+              top: rIdx * ROW_H,
+              height: ROW_H,
+              scrollSnapAlign:"start",
+              pointerEvents:"none",
+            }}/>
+          ))}
+
+          {/* ── HIGHLIGHT RIGA CORRENTE ───────────────────────────── */}
           <div style={{
-            position:"absolute",
-            left:0, right:0,
-            top: currentRow * ROW_H,
-            height: ROW_H,
-            animation: "mapCurrentRowPulse 2s ease-in-out infinite",
-            borderTop:`2px solid ${biomeColor}88`,
-            borderBottom:`2px solid ${biomeColor}88`,
-            pointerEvents:"none",
-            zIndex:0,
+            position:"absolute", left:0, right:0,
+            top: currentRow * ROW_H, height: ROW_H,
+            animation:"mapCurrentRowPulse 2s ease-in-out infinite",
+            borderTop:`2px solid ${biomeColor}66`,
+            borderBottom:`2px solid ${biomeColor}66`,
+            pointerEvents:"none", zIndex:0,
           }}/>
 
-          {/* ── "SEI QUI" indicatore triangolare sinistra ─────── */}
+          {/* ── "SEI QUI" — indicatore freccia sinistra ──────────── */}
           <div style={{
             position:"absolute",
-            left: 0,
-            top: currentRow * ROW_H + ROW_H / 2 - 10,
-            width: 0, height: 0,
-            borderTop: "10px solid transparent",
-            borderBottom: "10px solid transparent",
-            borderLeft: `12px solid ${biomeColor}`,
-            filter: `drop-shadow(0 0 6px ${biomeColor})`,
-            pointerEvents:"none",
-            zIndex: 10,
-            animation: "mapYouAreHere 1.2s ease-in-out infinite",
-          }}/>
+            left:0,
+            top: currentRow * ROW_H + ROW_H / 2 - 12,
+            zIndex:10, pointerEvents:"none",
+          }}>
+            {/* freccia */}
+            <div style={{
+              width:0, height:0,
+              borderTop:"12px solid transparent",
+              borderBottom:"12px solid transparent",
+              borderLeft:`14px solid ${biomeColor}`,
+              filter:`drop-shadow(0 0 8px ${biomeColor})`,
+              animation:"mapYouAreHere 1.2s ease-in-out infinite",
+            }}/>
+          </div>
 
-          {/* ── GRIGLIA DI SFONDO ────────────────────────────────── */}
+          {/* ── Numeri di riga sull'asse destro ──────────────────── */}
+          {map.rows.map((_, rIdx) => (
+            <div key={`rnum-${rIdx}`} style={{
+              position:"absolute",
+              right:2,
+              top: rIdx * ROW_H + 2,
+              color: rIdx === currentRow ? biomeColor : "#222233",
+              fontSize:"8px", fontFamily:FONT,
+              letterSpacing:"1px",
+              pointerEvents:"none", zIndex:1,
+              fontWeight: rIdx === currentRow ? "bold" : "normal",
+              textShadow: rIdx === currentRow ? `0 0 6px ${biomeColor}` : "none",
+            }}>{rIdx + 1}</div>
+          ))}
+
+          {/* ── GRIGLIA SFONDO ───────────────────────────────────── */}
           <svg
             style={{position:"absolute", top:0, left:0, width:"100%", height:"100%", pointerEvents:"none"}}
             aria-hidden
           >
             <defs>
-              <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff04" strokeWidth="0.5"/>
+              <pattern id="mapgrid" width="44" height="44" patternUnits="userSpaceOnUse">
+                <path d="M 44 0 L 0 0 0 44" fill="none" stroke="#ffffff03" strokeWidth="0.5"/>
               </pattern>
-              <radialGradient id="biomeGlowMap" cx="50%" cy="40%" r="55%">
-                <stop offset="0%"   stopColor={biomeColor} stopOpacity="0.05"/>
+              <radialGradient id="biomeGlowMap" cx="50%" cy="35%" r="55%">
+                <stop offset="0%"   stopColor={biomeColor} stopOpacity="0.06"/>
                 <stop offset="100%" stopColor={biomeColor} stopOpacity="0"/>
               </radialGradient>
               <filter id="lineglow" x="-50%" y="-20%" width="200%" height="140%">
-                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feGaussianBlur stdDeviation="2" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <filter id="trailglow" x="-50%" y="-20%" width="200%" height="140%">
+              <filter id="trailglow" x="-60%" y="-30%" width="220%" height="160%">
                 <feGaussianBlur stdDeviation="3" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
@@ -283,66 +421,48 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
               const isActive    = fromVisited && toReachable;
               const isPast      = fromVisited && visitedNodes.includes(toId);
 
-              // Edge non raggiungibile — linea fantasma tratteggiata
               if (!isActive && !isPast) return (
                 <line key={`${fromId}-${toId}`}
                   x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                  stroke="#aaaacc" strokeWidth="1" strokeOpacity="0.12"
-                  strokeDasharray="2 10" strokeLinecap="round"
+                  stroke="#aaaacc" strokeWidth="1" strokeOpacity="0.10"
+                  strokeDasharray="2 12" strokeLinecap="round"
                 />
               );
 
               const col = edgeColor(toId, isActive, isPast, isShortcut);
 
-              // Percorso già fatto — trail glow ambra con animazione
-              if (isPast) {
-                return (
-                  <g key={`${fromId}-${toId}`}>
-                    {/* Glow sottostante */}
-                    <line
-                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                      stroke={col} strokeWidth="6" strokeOpacity="0.25"
-                      strokeLinecap="round"
-                      filter="url(#trailglow)"
-                    />
-                    {/* Linea principale */}
-                    <line
-                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                      stroke={col} strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                    {/* Dot di avanzamento */}
-                    <line
-                      x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
-                      stroke="#ffee88" strokeWidth="1.5" strokeOpacity="0.5"
-                      strokeDasharray="3 18"
-                      strokeLinecap="round"
-                      style={{animation: "mapTrailFlow 1.5s linear infinite"}}
-                    />
-                  </g>
-                );
-              }
+              if (isPast) return (
+                <g key={`${fromId}-${toId}`}>
+                  <line x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                    stroke={col} strokeWidth="5" strokeOpacity="0.20"
+                    strokeLinecap="round" filter="url(#trailglow)"/>
+                  <line x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                    stroke={col} strokeWidth="2.5" strokeLinecap="round"/>
+                  <line x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
+                    stroke="#ffee88" strokeWidth="1.5" strokeOpacity="0.45"
+                    strokeDasharray="3 20" strokeLinecap="round"
+                    style={{animation:"mapTrailFlow 1.4s linear infinite"}}/>
+                </g>
+              );
 
               const sw   = 2.5;
-              const dash = isShortcut ? "5 6" : "6 5";
+              const dash = isShortcut ? "5 7" : "6 5";
 
               if (isShortcut) {
-                const ctrl1x = from.cx - 50, ctrl1y = from.cy + 25;
-                const ctrl2x = to.cx   - 50, ctrl2y = to.cy   - 25;
+                const ctrl1x = from.cx - 55, ctrl1y = from.cy + 28;
+                const ctrl2x = to.cx   - 55, ctrl2y = to.cy   - 28;
                 return (
                   <path key={`${fromId}-${toId}`}
                     d={`M ${from.cx} ${from.cy} C ${ctrl1x} ${ctrl1y} ${ctrl2x} ${ctrl2y} ${to.cx} ${to.cy}`}
                     stroke={col} strokeWidth={sw} strokeDasharray={dash}
-                    fill="none" strokeLinecap="round" filter="url(#lineglow)"
-                  />
+                    fill="none" strokeLinecap="round" filter="url(#lineglow)"/>
                 );
               }
               return (
                 <line key={`${fromId}-${toId}`}
                   x1={from.cx} y1={from.cy} x2={to.cx} y2={to.cy}
                   stroke={col} strokeWidth={sw} strokeDasharray={dash}
-                  strokeLinecap="round" filter="url(#lineglow)"
-                />
+                  strokeLinecap="round" filter="url(#lineglow)"/>
               );
             })}
           </svg>
@@ -364,41 +484,39 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
             const dangerNode = DANGER_TYPES.has(node.type);
             const safeNode   = SAFE_TYPES.has(node.type);
 
-            // Nodi visitati: bordo ambra scuro, sfondo carbonizzato
             const borderWidth = isBoss ? 3 : isElite || (isActive && secretUnlocked) ? 3 : isActive ? 2 : 1;
-            const borderCol = visited             ? "#3a3020"
+            const borderCol = visited             ? "#2a2016"
               : isBoss                            ? "#ff2244"
               : isElite                           ? C.orange
               : isActive && secretUnlocked        ? "#cc99ff"
               : isActive && dangerNode            ? "#ff4444"
               : isActive && safeNode              ? "#44dd88"
               : isActive                          ? C.gold
-              : "#1e1e30";
+              : "#181828";
 
-            // Sfondo visitato: tono caldo scuro (ambra bruciata) invece di nero piatto
-            const bgCol = visited                  ? "#120e08"
-              : isBoss                             ? "#3a0000"
-              : isElite                            ? "#2a1800"
-              : isActive && secretUnlocked         ? "#200028"
-              : isActive && dangerNode             ? "#2e0000"
-              : isActive && safeNode               ? "#002e00"
-              : isActive                           ? "#0c0c30"
-              : "#0a0a12";
+            const bgCol = visited                  ? "#0e0b06"
+              : isBoss                             ? "#380000"
+              : isElite                            ? "#271600"
+              : isActive && secretUnlocked         ? "#1e0026"
+              : isActive && dangerNode             ? "#2a0000"
+              : isActive && safeNode               ? "#002a00"
+              : isActive                           ? "#090930"
+              : "#080812";
 
             const shadow = visited
               ? "none"
               : isActive
                 ? isBoss
-                  ? `0 0 24px ${C.red}ee, 0 0 48px ${C.red}66, 3px 3px 0 #000`
+                  ? `0 0 20px ${C.red}ee,0 0 44px ${C.red}55,3px 3px 0 #000`
                   : isElite
-                    ? `0 0 18px ${C.orange}dd, 3px 3px 0 #000`
+                    ? `0 0 16px ${C.orange}dd,3px 3px 0 #000`
                     : secretUnlocked
-                      ? `0 0 18px #cc99ffdd, 3px 3px 0 #000`
+                      ? `0 0 16px #cc99ffdd,3px 3px 0 #000`
                       : dangerNode
-                        ? `0 0 16px #ff4444dd, 3px 3px 0 #000`
+                        ? `0 0 14px #ff4444dd,3px 3px 0 #000`
                         : safeNode
-                          ? `0 0 16px #44dd88dd, 3px 3px 0 #000`
-                          : `0 0 16px ${C.gold}dd, 3px 3px 0 #000`
+                          ? `0 0 14px #44dd88dd,3px 3px 0 #000`
+                          : `0 0 14px ${C.gold}dd,3px 3px 0 #000`
                 : "none";
 
             const animation = isBoss && isActive ? "bossGlow 1.8s infinite"
@@ -416,17 +534,18 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
               : (isElite ? "★ ELITE — rischio e premi raddoppiati! " : "")
                 + (NODE_TOOLTIPS[node.type] || node.type);
 
-            const labelColor = visited             ? "#3a3028"   // ambra scurissima per visitati
-              : isBoss                             ? "#ff6688"
-              : isActive && dangerNode             ? "#ff8888"
-              : isActive && safeNode               ? "#88ffaa"
-              : isActive && secretUnlocked         ? "#ddaaff"
+            const labelColor = visited             ? "#2e2818"
+              : isBoss                             ? "#ff5577"
+              : isActive && dangerNode             ? "#ff7777"
+              : isActive && safeNode               ? "#77ffaa"
+              : isActive && secretUnlocked         ? "#ccaaff"
               : isActive                           ? C.gold
-              : "#2a2a3a";
+              : "#202030";
 
             return (
               <Tooltip key={node.id} text={tooltip}>
                 <div
+                  className={isActive && !effectivelyHidden ? "map-node-active" : ""}
                   onClick={() => isActive && !effectivelyHidden ? onSelectNode(node, rIdx) : null}
                   style={{
                     position:"absolute",
@@ -434,93 +553,109 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     width: NW, height: NH,
                     display:"flex", flexDirection:"column",
                     alignItems:"center", justifyContent:"center",
-                    gap:"2px",
+                    gap:"3px",
                     border: `${borderWidth}px solid ${borderCol}`,
                     background: bgCol,
                     overflow:"hidden",
                     cursor: isActive && !effectivelyHidden ? "pointer" : "default",
-                    // Visitati: opacità media (50%) così sono riconoscibili ma non ingombranti
-                    opacity: visited ? 0.52 : effectivelyHidden ? 0.5 : 1,
+                    opacity: visited ? 0.48 : effectivelyHidden ? 0.45 : 1,
                     zIndex: isBoss ? 3 : isActive ? 2 : 1,
                     boxShadow: shadow,
-                    transition:"transform 0.12s, box-shadow 0.2s",
+                    transition:"transform 0.1s, box-shadow 0.18s",
                     animation,
                     userSelect:"none",
-                    // Visitati: diagonale "consumato"
+                    touchAction:"manipulation",
+                    WebkitTapHighlightColor:"transparent",
                     ...(visited ? {
-                      background: `repeating-linear-gradient(
+                      background:`repeating-linear-gradient(
                         45deg,
-                        #120e08 0px, #120e08 6px,
-                        #0d0a06 6px, #0d0a06 12px
+                        #0e0b06 0px,#0e0b06 5px,
+                        #0a0806 5px,#0a0806 10px
                       )`,
+                    } : isActive ? {
+                      // Sottile inner glow per nodi attivi
+                      boxShadow: shadow + `, inset 0 0 10px ${borderCol}18`,
                     } : {}),
                   }}
-                  onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.1)"; }}
+                  onMouseEnter={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.12)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; }}
-                  onTouchStart={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.1)"; }}
+                  onTouchStart={e => { if(isActive && !effectivelyHidden) e.currentTarget.style.transform="scale(1.08)"; }}
                   onTouchEnd={e   => { e.currentTarget.style.transform="scale(1)"; }}
                 >
-                  {/* Overlay diagonale per visitati */}
+                  {/* Overlay diagonale visitati */}
                   {visited && (
                     <div style={{
                       position:"absolute", inset:0,
-                      background:"linear-gradient(135deg, transparent 40%, rgba(0,0,0,0.4) 60%)",
+                      background:"linear-gradient(135deg,transparent 38%,rgba(0,0,0,0.35) 62%)",
+                      pointerEvents:"none",
+                    }}/>
+                  )}
+
+                  {/* Riflesso superiore per nodi attivi */}
+                  {isActive && !visited && (
+                    <div style={{
+                      position:"absolute", top:0, left:0, right:0,
+                      height:"30%",
+                      background:`linear-gradient(180deg,${borderCol}16 0%,transparent 100%)`,
                       pointerEvents:"none",
                     }}/>
                   )}
 
                   {/* Emoji icona */}
                   <span style={{
-                    fontSize: isBoss ? "26px" : "20px",
+                    fontSize: isBoss ? "28px" : "22px",
                     lineHeight:1,
                     filter: visited
-                      ? "grayscale(0.8) brightness(0.5)"
-                      : isActive ? `drop-shadow(0 0 5px ${borderCol})` : "none",
+                      ? "grayscale(0.9) brightness(0.45)"
+                      : isActive
+                        ? `drop-shadow(0 0 6px ${borderCol}) drop-shadow(0 0 12px ${borderCol}66)`
+                        : "none",
                     position:"relative", zIndex:1,
                   }}>
                     {icon}
                   </span>
 
-                  {/* Etichetta tipo */}
+                  {/* Etichetta */}
                   <span style={{
                     fontSize: isBoss ? "8px" : "7px",
                     color: labelColor,
                     fontFamily:FONT, fontWeight:"bold",
-                    textAlign:"center", lineHeight:"1.2",
-                    width:`${NW - 4}px`,
+                    textAlign:"center", lineHeight:"1.15",
+                    width:`${NW - 6}px`,
                     display:"-webkit-box",
-                    WebkitLineClamp: 2,
+                    WebkitLineClamp:2,
                     WebkitBoxOrient:"vertical",
                     overflow:"hidden",
                     wordBreak:"break-word",
                     WebkitTextSizeAdjust:"none",
                     textSizeAdjust:"none",
-                    textShadow: isActive && !visited ? `0 0 5px ${borderCol}` : "none",
+                    textShadow: isActive && !visited ? `0 0 6px ${borderCol}` : "none",
                     position:"relative", zIndex:1,
+                    letterSpacing:"0.3px",
                   }}>
                     {label.toUpperCase()}
                   </span>
 
-                  {/* ✓ checkmark per nodi visitati */}
+                  {/* ✓ checkmark visitati */}
                   {visited && (
                     <span style={{
                       position:"absolute", inset:0,
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:"22px", color:"#5a4820", opacity:0.6,
+                      fontSize:"20px", color:"#4a3a18", opacity:0.55,
                       pointerEvents:"none", zIndex:2,
-                      textShadow:"0 0 3px #000",
+                      textShadow:"0 0 4px #000",
                     }}>✓</span>
                   )}
 
                   {/* Badge ELITE */}
                   {isElite && (
                     <span style={{
-                      position:"absolute", top:-7, right:-7,
+                      position:"absolute", top:-8, right:-8,
                       fontSize:"9px", background:C.orange, color:"#000",
-                      width:"16px", height:"16px",
+                      width:"17px", height:"17px",
                       display:"flex", alignItems:"center", justifyContent:"center",
                       fontWeight:"bold",
-                      boxShadow:`0 0 8px ${C.orange}cc`,
+                      boxShadow:`0 0 10px ${C.orange}cc`,
                       zIndex:3,
                     }}>★</span>
                   )}
@@ -531,24 +666,40 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
         </div>
       </div>
 
-      {/* ── LEGENDA FOOTER ──────────────────────────────────────── */}
+      {/* ══ FOOTER FISSO — Legenda + hint scroll ══════════════════ */}
       <div style={{
         flexShrink:0,
-        display:"flex", alignItems:"center", gap:"10px",
-        justifyContent:"center", flexWrap:"wrap",
+        borderTop:`1px solid ${biomeColor}33`,
+        background:`linear-gradient(0deg,#060610 0%,#080814 100%)`,
         padding:"5px 10px",
-        borderTop:`1px solid ${C.dim}44`,
-        background:"#080810",
+        display:"flex", alignItems:"center", gap:"0",
+        justifyContent:"space-between",
       }}>
-        {LEGEND.map(({ col, label }) => (
-          <span key={label} style={{
-            display:"flex", alignItems:"center", gap:"3px",
-            color: col, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
-          }}>
-            <span style={{display:"inline-block", width:"7px", height:"7px", background: col, boxShadow:`0 0 4px ${col}`}}/>
-            {label}
-          </span>
-        ))}
+        {/* Legenda tipo nodi */}
+        <div style={{display:"flex", alignItems:"center", gap:"8px", flexWrap:"nowrap", overflow:"hidden"}}>
+          {LEGEND.map(({ col, label }) => (
+            <span key={label} style={{
+              display:"flex", alignItems:"center", gap:"3px",
+              color: col, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
+              flexShrink:0,
+            }}>
+              <span style={{
+                display:"inline-block", width:"8px", height:"8px",
+                background: col,
+                boxShadow:`0 0 5px ${col}`,
+              }}/>
+              {label}
+            </span>
+          ))}
+        </div>
+
+        {/* Hint scroll */}
+        <span style={{
+          flexShrink:0,
+          color:`${biomeColor}55`, fontSize:"9px",
+          fontFamily:FONT, letterSpacing:"1px",
+          marginLeft:"8px",
+        }}>↕ SCORRI</span>
       </div>
     </div>
   );
