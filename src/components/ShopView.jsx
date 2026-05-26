@@ -439,14 +439,9 @@ export function ShopView({ player, onBuyCard, onBuyItem, onBuyGrattatore, onLeav
         </div>
       </div>
 
-      {/* Contenuto scorrevole verticalmente */}
+      {/* Contenuto — lo scroll verticale è gestito dal DESK esterno */}
       <div style={{
-        flex: 1,
-        overflowY: "auto",
         padding: mobile ? "0 10px 10px" : "0 12px 12px",
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
-        WebkitOverflowScrolling: "touch",
       }}>
 
         {/* ═══ GRATTA & VINCI ═══ */}
@@ -750,6 +745,7 @@ export function ShopView({ player, onBuyCard, onBuyItem, onBuyGrattatore, onLeav
         padding: mobile ? "8px 10px" : "10px 12px",
         background: "#05050b",
         flexShrink: 0,
+        position: "sticky", bottom: 0, zIndex: 10,
       }}>
         {player.scratchCards.length > 0 && (
           <Btn onClick={onScratch} variant="gold" style={{flex: 1, textAlign:"center"}}>
