@@ -240,3 +240,64 @@ export function CarmeloLogMini({ messages, color }) {
     </div>
   );
 }
+
+// ─── CARMELO SCRATCH STRIP ──────────────────────────────────
+// Striscia compatta (40px) con typewriter dell'ULTIMO messaggio.
+// Usata nell'overlay del grattino al posto di CarmeloLogMini.
+export function CarmeloScratchStrip({ messages, color }) {
+  const latest = messages && messages.length > 0 ? messages[messages.length - 1] : "";
+  const latestPlain = msgPlainText(latest);
+  const [typedText, setTypedText] = useState("");
+  const [done, setDone] = useState(true);
+
+  useEffect(() => {
+    if (!latestPlain) return;
+    setTypedText(""); setDone(false);
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i >= latestPlain.length) { clearInterval(iv); setDone(true); return; }
+      setTypedText(latestPlain.slice(0, i + 1));
+      if (i % 3 === 0 && latestPlain[i] !== ' ' && latestPlain[i] !== '"') AudioEngine.dialogueTick();
+      i++;
+    }, 28);
+    return () => clearInterval(iv);
+  }, [latestPlain]);
+
+  const skip = () => { setTypedText(latestPlain); setDone(true); };
+
+  if (!latest) return null;
+  return (
+    <div onClick={skip} style={{
+      flexShrink:0, height:"44px",
+      display:"flex", alignItems:"center", gap:"8px",
+      background:"#030308",
+      borderTop:`1px solid ${color}44`,
+      padding:"0 10px",
+      cursor:"pointer",
+      boxShadow:`0 -4px 16px #00000066`,
+    }}>
+      {/* Badge NPC */}
+      <div style={{
+        flexShrink:0, width:"26px", height:"26px",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        background:`${color}18`, border:`1px solid ${color}44`,
+        fontSize:"14px", lineHeight:1,
+      }}>🧓</div>
+      {/* Testo animato — singola riga con overflow ellipsis */}
+      <div style={{flex:1, minWidth:0, overflow:"hidden"}}>
+        <div style={{
+          color: color+"cc", fontSize:"11px", fontStyle:"italic",
+          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+          lineHeight:1.3,
+        }}>
+          {typedText}
+          {!done && <span style={{color, animation:"dialogueCursor 0.5s step-start infinite"}}>▌</span>}
+        </div>
+      </div>
+      {/* Indicatore "tap per saltare" — solo durante animazione */}
+      {!done && (
+        <div style={{flexShrink:0, fontSize:"8px", color:color+"55", letterSpacing:"1px"}}>TAP▶</div>
+      )}
+    </div>
+  );
+}

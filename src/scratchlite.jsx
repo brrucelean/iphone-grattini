@@ -33,7 +33,7 @@ import { SkeletonFinger } from "./components/SkeletonFinger.jsx";
 import { Tooltip } from "./components/Tooltip.jsx";
 import { Btn } from "./components/Btn.jsx";
 import { NailDisplay } from "./components/NailDisplay.jsx";
-import { DialogueBox, msgPlainText, MsgRender, CarmeloLogBox, CarmeloLogMini } from "./components/DialogueBox.jsx";
+import { DialogueBox, msgPlainText, MsgRender, CarmeloLogBox, CarmeloLogMini, CarmeloScratchStrip } from "./components/DialogueBox.jsx";
 import { NewsTicker, NpcCommentStrip } from "./components/NewsTicker.jsx";
 import { HUD } from "./components/HUD.jsx";
 import { LogPanel, LogSidebar } from "./components/LogPanel.jsx";
@@ -448,6 +448,7 @@ export default function Grattini() {
         @keyframes lineFlow { 0% { stroke-dashoffset:20; } 100% { stroke-dashoffset:0; } }
         @keyframes newsTicker { 0% { transform: translateX(0); } 100% { transform: translateX(calc(-100% - 100vw)); } }
         @keyframes dialogueCursor { 0%,49% { opacity:1; } 50%,100% { opacity:0; } }
+        @keyframes inventorySlideIn { 0% { transform:translateX(100%); opacity:0; } 100% { transform:translateX(0); opacity:1; } }
         @keyframes dialogueIn { 0% { opacity:0; transform:translateY(8px); } 100% { opacity:1; transform:translateY(0); } }
         @keyframes titleBlink { 0%,100% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } 48% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } 50% { text-shadow: 0 0 40px ${C.gold}, 0 0 80px ${C.gold}aa, 0 0 120px ${C.gold}55; opacity:0.7; } 52% { text-shadow: 0 0 10px ${C.gold}88, 0 0 30px ${C.gold}44; opacity:1; } }
         @keyframes titleGlitter { 0% { opacity:0; transform:scale(0.4) translateY(0); } 25% { opacity:1; transform:scale(1.3) translateY(-3px); } 60% { opacity:0.5; transform:scale(0.9) translateY(-7px); } 100% { opacity:0; transform:scale(0.3) translateY(-14px); } }
@@ -691,11 +692,9 @@ export default function Grattini() {
             </div>
           </div>
 
-          {/* ── CARMELO STRIP — visibile durante introScratch così lui può parlare ── */}
+          {/* ── CARMELO STRIP — striscia 44px con typewriter, visibile durante introScratch ── */}
           {returnScreen === "introScratch" && carmeloLog.length > 0 && (
-            <div style={{flexShrink:0, background:"#030308", borderTop:`1px solid ${C.gold}33`}}>
-              <CarmeloLogMini messages={carmeloLog} color={C.gold} />
-            </div>
+            <CarmeloScratchStrip messages={carmeloLog} color={C.gold} />
           )}
         </div>
       )}
@@ -3098,26 +3097,36 @@ export default function Grattini() {
         <div
           onClick={() => setShowInventoryPanel(false)}
           style={{
-            position:"fixed", top:"52px", left:"160px", right:"408px", bottom:"54px",
+            position:"fixed", inset:0, top:"52px",
             background:"rgba(0,0,0,0.55)", zIndex:99990, cursor:"pointer",
           }}
         />
       )}
       {showInventoryPanel && player && (
         <div style={{
-          position:"fixed", top:"56px", bottom:"58px", right:"8px", width:"400px",
+          position:"fixed",
+          top:"56px",
+          right:0,
+          width:"min(400px, 100vw)",
+          maxHeight:"calc(100vh - 80px)",
           background:C.card,
           border:`2px solid ${C.magenta}`,
+          borderRight:"none",
           boxShadow:`-4px 0 20px ${C.magenta}33, inset 0 0 30px ${C.magenta}08`,
           zIndex:99995, overflowY:"auto", overflowX:"hidden",
           display:"flex", flexDirection:"column",
           fontFamily:FONT,
+          animation:"inventorySlideIn 0.2s ease-out",
         }}>
-          <div style={{padding:"16px 16px 0"}}>
-            <div style={{marginBottom:"14px"}}>
+          <div style={{padding:"12px 14px 0"}}>
+            <div style={{marginBottom:"12px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
               <div style={{color:C.magenta, fontWeight:"bold", fontSize:"14px", letterSpacing:"1px"}}>
                 🎒 ZAINO
               </div>
+              <div onClick={() => setShowInventoryPanel(false)} style={{
+                color:C.magenta, fontSize:"18px", cursor:"pointer", lineHeight:1,
+                padding:"2px 6px", opacity:0.7,
+              }}>✕</div>
             </div>
 
             {/* Consumabili */}
@@ -3179,7 +3188,7 @@ export default function Grattini() {
             </div>
 
           </div>
-          <div style={{marginTop:"auto", padding:"10px 12px", borderTop:`1px solid #1a1a2a`, color:C.text, fontSize:"10px", textAlign:"center"}}>
+          <div style={{marginTop:"10px", padding:"10px 12px", borderTop:`1px solid #1a1a2a`, color:C.dim, fontSize:"10px", textAlign:"center"}}>
             Puoi usare oggetti in qualsiasi momento · Grattatori vanno equipaggiati prima di grattare
           </div>
         </div>
