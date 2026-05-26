@@ -419,7 +419,8 @@ export default function Grattini() {
       width: "100%",
       height: "100%",
       paddingTop: "env(safe-area-inset-top, 0px)",
-      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      /* paddingBottom rimosso: gestito dal DESK così il background riempie
+         fino al bordo fisico dello schermo (PWA standalone mode). */
       animation: screenShake ? "screenShake 0.3s ease-in-out" : "none",
       filter: neonDim < 1 ? `saturate(${neonDim}) brightness(${0.6 + neonDim * 0.4})` : "none",
       transition: "filter 1.5s ease",
@@ -750,11 +751,14 @@ export default function Grattini() {
       )}
 
       {/* ── DESK — area di gioco centrale, scrollabile ── */}
+      {/* paddingBottom: safe-area bottom qui (non su S.container) così il background
+          del DESK riempie fino al bordo fisico, evitando il buco nero in PWA mode. */}
       <div style={{flex:1, minHeight:0,
         overflowY:"auto",
         overflowX:"hidden",
         WebkitOverflowScrolling:"touch", /* momentum scroll iOS */
         display:"flex", flexDirection:"column", alignItems:"center",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
         backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)",
         backgroundAttachment:"local", position:"relative",
       }}>
