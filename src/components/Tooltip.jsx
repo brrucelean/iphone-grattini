@@ -19,7 +19,7 @@ export function Tooltip({ text, children, color }) {
       )
     : null;
   return (
-    <span style={{display:"inline-block", cursor:"inherit"}}
+    <span style={{display:"block", cursor:"inherit"}}
       onMouseMove={e => {
         e.stopPropagation();
         const vw = window.innerWidth;

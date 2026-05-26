@@ -421,12 +421,10 @@ export function EventView({ node, player, onChoice }) {
   const portraitCorners = cornerBrackets(pal[2], 9, -2, 1, `0 0 4px ${pal[2]}66`);
   const dialogCorners = cornerBrackets(pal[1], 9, -2, 1, `0 0 4px ${pal[1]}66`);
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
-
   return (
     <div style={{
       ...S.panel, maxWidth:"900px", margin:"10px auto",
-      padding: isMobile ? "12px 12px" : "18px 20px",
+      padding:"12px 12px",
       position:"relative",
       boxShadow:`0 0 18px ${pal[0]}33, inset 0 0 24px #00000088`,
     }}>
@@ -454,31 +452,30 @@ export function EventView({ node, player, onChoice }) {
         </div>
       </div>
 
-      {/* ── Layout: su mobile stack verticale, su desktop 2 colonne ── */}
+      {/* ── Layout: flexWrap puro — si stacca in colonna quando < 300px ── */}
       <div style={{
         display:"flex",
-        flexDirection: isMobile ? "column" : "row",
-        gap: isMobile ? "10px" : "16px",
-        alignItems: isMobile ? "stretch" : "flex-start",
-        justifyContent:"center",
+        flexWrap:"wrap",
+        gap:"10px",
+        alignItems:"flex-start",
       }}>
         {/* ── RITRATTO ── */}
         {bigArt && (
           <div style={{
             flexShrink:0,
-            width: isMobile ? "auto" : "200px",
-            maxWidth: isMobile ? "160px" : "200px",
-            margin: isMobile ? "0 auto" : "0",
+            width:"140px",
+            maxWidth:"140px",
             position:"relative",
           }}>
             <span style={portraitCorners.tl} /><span style={portraitCorners.tr} />
             <span style={portraitCorners.bl} /><span style={portraitCorners.br} />
             <pre style={{
               ...S.pre,
-              fontSize: isMobile ? "7px" : "8px",
+              fontSize:"7px",
               lineHeight:"1.15",
               border:`1px solid ${pal[2]}55`, padding:"6px 8px",
               background:"#000000", whiteSpace:"pre", overflow:"hidden",
+              maxHeight:"160px",
               boxShadow:`inset 0 0 18px ${pal[0]}22`,
               margin:0,
             }}>
@@ -509,15 +506,15 @@ export function EventView({ node, player, onChoice }) {
           </div>
         )}
 
-        {/* ── DIALOGO + SCELTE — full width su mobile ── */}
-        <div style={{flex:1, minWidth:0, width: isMobile ? "100%" : undefined}}>
+        {/* ── DIALOGO + SCELTE — flex:1 + minWidth:0 per riempire spazio ── */}
+        <div style={{flex:"1 1 140px", minWidth:0}}>
           {/* Dialog blockquote con typing */}
           <div style={{position:"relative", marginBottom:"12px"}}>
             <span style={dialogCorners.tl} /><span style={dialogCorners.tr} />
             <span style={dialogCorners.bl} /><span style={dialogCorners.br} />
             <div style={{
               border:`2px solid ${pal[1]}88`,
-              padding: isMobile ? "10px 12px" : "12px 14px",
+              padding:"10px 12px",
               background:"#020208",
               minHeight:"60px", cursor:"pointer",
               boxShadow:`inset 0 0 16px ${pal[1]}11, 0 0 8px ${pal[1]}22`,
@@ -528,7 +525,7 @@ export function EventView({ node, player, onChoice }) {
               }}>❝</div>
               <div style={{
                 color:C.text,
-                fontSize: isMobile ? "13px" : "12px",
+                fontSize:"13px",
                 lineHeight:"1.7",
                 fontStyle:"italic", padding:"0 4px",
               }}>
@@ -566,8 +563,8 @@ export function EventView({ node, player, onChoice }) {
                       disabled={ch.condition === false}
                       variant={ch.action === "fight" ? "danger" : ch.action === "leave" ? "normal" : "gold"}
                       style={{
-                        fontSize: isMobile ? "12px" : "11px",
-                        padding: isMobile ? "9px 12px" : "6px 10px",
+                        fontSize:"12px",
+                        padding:"9px 12px",
                         width:"100%", textAlign:"left",
                         lineHeight:"1.3",
                       }}>
