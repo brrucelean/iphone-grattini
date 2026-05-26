@@ -3106,9 +3106,9 @@ export default function Grattini() {
         <div style={{
           position:"fixed",
           top:"56px",
+          bottom:0,
           right:0,
           width:"min(400px, 100vw)",
-          maxHeight:"calc(100vh - 80px)",
           background:C.card,
           border:`2px solid ${C.magenta}`,
           borderRight:"none",

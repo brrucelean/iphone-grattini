@@ -1037,35 +1037,57 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
           animation:"pulse 0.6s ease-out"}}>{revealMsg}</div>
       )}
 
-      {/* Consiglio unghia sanguinante */}
+      {/* Consiglio unghia sanguinante — MODAL centrato che blocca interazione */}
       {!finished && !winFound && !nailAdviceDismissed && !showFirstWarning &&
         (nailState === "marcia" || scratchedWhileMarcia.current) &&
         Object.values(revealedCounts).some(v => v >= 2) && (
         <div style={{
-          background:"#1a0000", border:`2px solid ${C.red}`,
-          borderRadius:"0", padding:"9px 12px", marginBottom:"8px",
-          animation: showFirstWarning ? "none" : "pulse 1s infinite",
+          position:"fixed", inset:0, zIndex:9500,
+          background:"rgba(0,0,0,0.82)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          padding:"20px",
+          backdropFilter:"blur(2px)",
         }}>
-          {!showFirstWarning ? (
-            <>
-              <div style={{color:C.red, fontWeight:"bold", fontSize:"13px", marginBottom:"4px"}}>
-                🩸 Consiglio: abbandona ora!
-              </div>
-              <div style={{color:C.text, fontSize:"11px", lineHeight:"1.6", marginBottom:"8px"}}>
-                L'unghia <span style={{color:C.orange}}>insanguinata</span> sporca la schedina: vinci solo il <strong>25%</strong> del premio.<br/>
-                Abbandona, curati con disinfettante o cambia unghia.<br/>
-                <span style={{color:C.dim}}>Continua solo se vuoi rischiare.</span>
-              </div>
-              <div style={{display:"flex", gap:"8px", justifyContent:"center"}}>
-                <Btn variant="danger" onClick={() => handleFinish(false)} style={{fontSize:"12px"}}>
-                  ✗ Abbandona e cambia unghia
-                </Btn>
-                <Btn onClick={() => { onAdviceShown?.(); setNailAdviceDismissed(true); }} style={{fontSize:"11px", opacity:0.7}}>
-                  Rischio lo stesso
-                </Btn>
-              </div>
-            </>
-          ) : null}
+          <div style={{
+            background:"#120000",
+            border:`2px solid ${C.red}`,
+            boxShadow:`0 0 40px ${C.red}66, inset 0 0 30px ${C.red}0a`,
+            padding:"24px 20px",
+            maxWidth:"360px", width:"100%",
+            animation:"dialogueIn 0.2s ease-out",
+          }}>
+            {/* Header */}
+            <div style={{
+              color:C.red, fontWeight:"bold", fontSize:"15px",
+              letterSpacing:"1px", marginBottom:"14px", textAlign:"center",
+              textShadow:`0 0 12px ${C.red}88`,
+              fontFamily:FONT,
+            }}>
+              🩸 Consiglio: abbandona ora!
+            </div>
+            {/* Corpo */}
+            <div style={{
+              color:C.text, fontSize:"12px", lineHeight:"1.7",
+              marginBottom:"18px", textAlign:"center",
+            }}>
+              L'unghia <span style={{color:C.orange, fontWeight:"bold"}}>insanguinata</span> sporca la schedina:<br/>
+              vinci solo il <strong style={{color:C.red}}>25%</strong> del premio.<br/>
+              <br/>
+              Abbandona, curati con disinfettante o cambia unghia.<br/>
+              <span style={{color:C.dim, fontSize:"11px"}}>Continua solo se vuoi rischiare.</span>
+            </div>
+            {/* Bottoni */}
+            <div style={{display:"flex", flexDirection:"column", gap:"10px"}}>
+              <Btn variant="danger" onClick={() => handleFinish(false)}
+                style={{fontSize:"13px", padding:"12px", width:"100%", letterSpacing:"0.5px"}}>
+                ✗ Abbandona e cambia unghia
+              </Btn>
+              <Btn onClick={() => { onAdviceShown?.(); setNailAdviceDismissed(true); }}
+                style={{fontSize:"12px", padding:"10px", width:"100%", opacity:0.75, borderColor:"#333"}}>
+                ⚠️ Rischio lo stesso — continua
+              </Btn>
+            </div>
+          </div>
         </div>
       )}
 
