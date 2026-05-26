@@ -215,8 +215,6 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
   // Sprint 5: Mini-boss 3-combo challenge — traccia combo distinti raggiunti
   const [minibossCombosHit, setMinibossCombosHit] = useState([]); // array di nomi combo unici
   const [minibossBonusShown, setMinibossBonusShown] = useState(false);
-  // Sprint 5: flash quando una variante rara viene rivelata
-  const [variantFlash, setVariantFlash] = useState(null); // { label, color }
   // Auto-scroll del log risoluzione combattimento (stile chat)
   const logScrollRef = useRef(null);
   // Unghie nemico: 5 vite proprio come il giocatore
@@ -1171,24 +1169,25 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
 
   const won = playerMoney > enemyMoney;
 
-  // Fase resolve/end: layout flex-colonna pieno per tenere il log sempre visibile
+  // Tutte le fasi riempiono l'altezza disponibile — il combat container in scratchlite
+  // è flex:1 overflow:hidden, quindi CombatView occupa TUTTO lo spazio DESK.
+  // Per resolve/end: layout flex-colonna con log flex:1 (no scroll esterno).
+  // Per tutte le altre fasi: overflow:auto permette scroll interno se il contenuto è lungo.
   const isResolvingPhase = phase === "resolve" || phase === "end";
 
   return (
     <div style={{
-      flex: isResolvingPhase ? 1 : "none",
-      minHeight: isResolvingPhase ? 0 : "auto",
+      flex: 1,
+      minHeight: 0,
       display: "flex", flexDirection: "column",
-      overflow: isResolvingPhase ? "hidden" : "visible",
-      // Base panel styles (senza margin/maxWidth che forzano shrink)
-      fontFamily: S.panel.fontFamily || "inherit",
+      overflow: isResolvingPhase ? "hidden" : "auto",
+      WebkitOverflowScrolling: "touch",
       background: S.panel.background || C.card,
-      border: S.panel.border || `2px solid ${C.dim}`,
-      boxShadow: S.panel.boxShadow,
-      padding: isResolvingPhase ? "8px 12px 0" : S.panel.padding,
-      margin: isResolvingPhase ? "0" : "10px auto",
-      width: isResolvingPhase ? "100%" : S.panel.width,
-      maxWidth: isResolvingPhase ? "none" : "620px",
+      border: `2px solid ${C.dim}`,
+      boxShadow: `4px 4px 0 #000, 0 0 16px ${C.cyan}18`,
+      padding: isResolvingPhase ? "8px 12px 0" : "10px 12px",
+      margin: "0",
+      width: "100%",
       textAlign:"center",
       boxSizing:"border-box",
       position:"relative",
@@ -1595,8 +1594,7 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
                       try { AudioEngine.win(); } catch(e) {}
                       const vInfo = CARD_VARIANTS[cell.variant];
                       if (vInfo) {
-                        setVariantFlash({ label: vInfo.label, color: vInfo.color });
-                        setTimeout(() => setVariantFlash(null), 1600);
+                        // variante rara: la carta stessa brilla, niente overlay
                       }
                     }
                   }}
@@ -2256,36 +2254,6 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
         </div>
       )}
 
-      {/* ✦ VARIANT REVEAL FLASH ✦ — quando una variante rara appare */}
-      {variantFlash && (
-        <div style={{
-          position:"absolute", top:"40%", left:"50%",
-          transform:"translate(-50%, -50%)",
-          zIndex: 9999, pointerEvents:"none",
-          textAlign:"center",
-          animation: "variantReveal 0.5s ease-out",
-        }}>
-          <div style={{
-            fontSize:"10px", color: variantFlash.color,
-            letterSpacing:"4px", fontWeight:"bold",
-            textShadow: `0 0 10px ${variantFlash.color}, 0 0 24px ${variantFlash.color}88`,
-            marginBottom:"8px",
-          }}>
-            ✦ VARIANTE RARA ✦
-          </div>
-          <div style={{
-            fontSize:"42px", color: variantFlash.color,
-            letterSpacing:"6px", fontWeight:"bold",
-            textShadow: `0 0 16px ${variantFlash.color}, 0 0 40px ${variantFlash.color}bb, 0 0 80px ${variantFlash.color}66`,
-            padding:"12px 28px",
-            border: `3px solid ${variantFlash.color}`,
-            background: `${variantFlash.color}11`,
-            animation: "variantPulse 0.5s ease-in-out infinite",
-          }}>
-            ★ {variantFlash.label} ★
-          </div>
-        </div>
-      )}
     </div>
   );
 }
