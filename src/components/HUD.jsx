@@ -212,7 +212,7 @@ export function HUD({ player, onOpenInventory, inventoryOpen = false, moneyBling
   );
   return (
     <div style={{...S.panel, display:"flex", justifyContent:"space-between", alignItems:"center",
-      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background: bioPal.hudBg, borderColor: bioPal.border + "66", borderWidth:"2px",
+      flexWrap:"wrap", gap:"6px", padding:"8px 12px", background: bioPal.hudBg, border: `2px solid ${bioPal.border}66`,
       maxWidth:"calc(100% - 16px)", width:"calc(100% - 16px)", margin:"4px 8px",
       boxSizing:"border-box", overflow:"hidden", minWidth:0,
       position:"relative",
