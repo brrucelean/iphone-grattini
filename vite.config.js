@@ -6,16 +6,13 @@ export default defineConfig({
   base: "./",  // path relativi — necessario per itch.io
   server: { port: 5173 },
   build: {
-    // Splitta vendor (react/react-dom) dal codice app → migliore caching cross-deploy
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-        },
+        // React/ReactDOM in chunk separato — immutabile tra deploy, cache lunga
+        manualChunks: { vendor: ["react", "react-dom"] },
       },
     },
-    // Alza la soglia warning: il main chunk app è ~450KB ed è inevitabile
-    // senza un refactor pesante (tutto orchestrato da scratchlite.jsx)
-    chunkSizeWarningLimit: 600,
+    // index chunk ora ~300kB (era 472kB) — le schermate sono chunk lazy separati
+    chunkSizeWarningLimit: 320,
   },
 });

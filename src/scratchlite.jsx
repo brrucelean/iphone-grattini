@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { C, FONT, MAX_ITEMS } from "./data/theme.js";
 import { NAIL_INFO } from "./data/nails.js";
 import { ACHIEVEMENTS } from "./data/achievements.js";
@@ -39,21 +39,36 @@ import { HUD } from "./components/HUD.jsx";
 import { LogPanel, LogSidebar } from "./components/LogPanel.jsx";
 import { NailSidebar } from "./components/NailSidebar.jsx";
 import { InventorySidebar } from "./components/InventorySidebar.jsx";
-import { ScratchCell } from "./components/ScratchCell.jsx";
-import { DoppioONullaView } from "./components/DoppioONullaView.jsx";
-import { ScratchCardView } from "./components/ScratchCardView.jsx";
-import { CombatCardScratch, CombatView, DEBUG_MODE, DEBUG_COMBAT, DEBUG_BIOME, DEBUG_ROW } from "./components/CombatView.jsx";
+// ScratchCell usato solo dentro ScratchCardView — non serve importarlo qui
+import { DEBUG_MODE, DEBUG_COMBAT, DEBUG_BIOME, DEBUG_ROW } from "./debug.js";
 import { CARD_VARIANTS } from "./utils/combat.js";
 import { STORAGE_KEYS, getStored, setStored, removeStored } from "./utils/storage.js";
-import { MapView } from "./components/MapView.jsx";
-import { ShopView } from "./components/ShopView.jsx";
-import { LocandaView } from "./components/LocandaView.jsx";
-import { EventView } from "./components/EventView.jsx";
+
+// ─── LAZY CHUNKS — ogni schermata scaricata on-demand ─────────────────────────
+const ScratchCardView  = lazy(() => import("./components/ScratchCardView.jsx").then(m => ({ default: m.ScratchCardView })));
+const DoppioONullaView = lazy(() => import("./components/DoppioONullaView.jsx").then(m => ({ default: m.DoppioONullaView })));
+const MapView          = lazy(() => import("./components/MapView.jsx").then(m => ({ default: m.MapView })));
+const ShopView         = lazy(() => import("./components/ShopView.jsx").then(m => ({ default: m.ShopView })));
+const LocandaView      = lazy(() => import("./components/LocandaView.jsx").then(m => ({ default: m.LocandaView })));
+const EventView        = lazy(() => import("./components/EventView.jsx").then(m => ({ default: m.EventView })));
+const CombatView       = lazy(() => import("./components/CombatView.jsx").then(m => ({ default: m.CombatView })));
 // ═══════════════════════════════════════════════════════════════
 //  G R A T T I N I  —  Beta 5
 //  A roguelike scratch card game with ASCII aesthetics
 // ═══════════════════════════════════════════════════════════════
 
+
+// ─── LAZY FALLBACK — schermata di attesa per i chunk on-demand ───────────────
+function LazyFallback() {
+  return (
+    <div style={{
+      flex:1, display:"flex", alignItems:"center", justifyContent:"center",
+      color:"#333355", fontFamily:"monospace", fontSize:"11px", letterSpacing:"2px",
+    }}>
+      ░░░
+    </div>
+  );
+}
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────
 const hasRelic = (player, effectId) => player?.relics?.some(r => r.effect === effectId);
@@ -668,6 +683,7 @@ export default function Grattini() {
           }}>
             {/* animation wrapper */}
             <div style={{animation:"scratchCardSlideIn 0.28s ease-out both", width:"100%", display:"flex", justifyContent:"center"}}>
+              <Suspense fallback={<LazyFallback />}>
               <ScratchCardView
                 card={scratchingCard}
                 nailState={getActiveNailState()}
@@ -707,6 +723,7 @@ export default function Grattini() {
                   }
                 }}
               />
+              </Suspense>
             </div>
           </div>
 
@@ -1268,11 +1285,13 @@ export default function Grattini() {
       {/* ═══ DOPPIO O NULLA ═══ */}
       {screen === "doppioONulla" && player && doppioONulla && (
         <div style={{maxWidth:"900px", width:"100%"}}>
+          <Suspense fallback={<LazyFallback />}>
           <DoppioONullaView
             prize={doppioONulla.prize}
             onDecline={handleDoppioDecline}
             onResult={handleDoppioResult}
           />
+          </Suspense>
         </div>
       )}
 
@@ -1908,6 +1927,7 @@ export default function Grattini() {
           display:"flex", flexDirection:"column", overflow:"hidden",
         }}>
           {/* Mappa — occupa tutto lo spazio disponibile */}
+          <Suspense fallback={<LazyFallback />}>
           <MapView
             map={map}
             currentRow={currentRow}
@@ -1917,6 +1937,7 @@ export default function Grattini() {
             currentBiome={currentBiome}
             playerFortuna={effectiveFortune || player.fortune || 0}
           />
+          </Suspense>
 
           {/* Striscia inventario compatta — flexShrink:0, NON toglie spazio alla mappa */}
           {(player.items.length > 0 || player.grattatori.length > 0) && (
@@ -2001,6 +2022,7 @@ export default function Grattini() {
       {/* ═══ SHOP (Tabaccaio) ═══ */}
       {screen === "shop" && player && (
         <div style={{maxWidth:"900px", width:"100%"}}>
+          <Suspense fallback={<LazyFallback />}>
           <ShopView
             player={player}
             currentRow={currentRow}
@@ -2012,28 +2034,33 @@ export default function Grattini() {
             onScratch={handleShopScratch}
             onSlotResult={handleSlotResult}
           />
+          </Suspense>
         </div>
       )}
 
       {/* ═══ LOCANDA ═══ */}
       {screen === "locanda" && player && (
         <div style={{maxWidth:"900px", width:"100%"}}>
+          <Suspense fallback={<LazyFallback />}>
           <LocandaView
             player={player}
             onRest={handleRest}
             onLeave={() => setScreen("map")}
           />
+          </Suspense>
         </div>
       )}
 
       {/* ═══ EVENT / NPC ═══ */}
       {screen === "event" && player && currentNode && (
         <div style={{maxWidth:"900px", width:"100%"}}>
+          <Suspense fallback={<LazyFallback />}>
           <EventView
             node={currentNode}
             player={player}
             onChoice={handleEventChoice}
           />
+          </Suspense>
         </div>
       )}
 
@@ -2050,6 +2077,7 @@ export default function Grattini() {
       {/* ═══ COMBAT ═══ */}
       {screen === "combat" && player && combatEnemy && (
         <div style={{flex:1, minHeight:0, width:"100%", maxWidth:"900px", display:"flex", flexDirection:"column", overflow:"hidden"}}>
+          <Suspense fallback={<LazyFallback />}>
           <CombatView
             enemy={combatEnemy}
             player={player}
@@ -2091,6 +2119,7 @@ export default function Grattini() {
               });
             }}
           />
+          </Suspense>
         </div>
       )}
 

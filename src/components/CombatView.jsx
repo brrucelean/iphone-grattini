@@ -15,17 +15,8 @@ import { NailDisplay } from "./NailDisplay.jsx";
 // Nomi categoria abbreviati — COMBATTIMENTO è troppo lungo per le card strette
 const CAT_SHORT = { COMBATTIMENTO: "ATTACCO", DIFESA: "DIFESA", DENARO: "DENARO" };
 
-// ─── DEBUG FLAGS — leggibili da URL params (prod-safe: nessun param = tutto off) ─
-// Esempi: ?biome=0  ?combat=boss  ?combat=1  ?mode=1  ?row=5
-const _p = typeof window !== "undefined"
-  ? new URLSearchParams(window.location.search)
-  : new URLSearchParams();
-export const DEBUG_MODE   = _p.has("mode");
-export const DEBUG_COMBAT = _p.has("combat")
-  ? (_p.get("combat") === "boss" ? "boss" : true)
-  : false;
-export const DEBUG_BIOME  = _p.has("biome")  ? Number(_p.get("biome"))  : null;
-export const DEBUG_ROW    = _p.has("row")    ? Number(_p.get("row"))    : null;
+// ─── DEBUG FLAGS — importati da debug.js (URL params) ────────────────────────
+export { DEBUG_MODE, DEBUG_COMBAT, DEBUG_BIOME, DEBUG_ROW } from "../debug.js";
 
 // ─── COMBAT CARD SCRATCH ─────────────────────────────────────
 export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailState = "sana" }) {
