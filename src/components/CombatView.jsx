@@ -15,8 +15,6 @@ import { NailDisplay } from "./NailDisplay.jsx";
 // Nomi categoria abbreviati — COMBATTIMENTO è troppo lungo per le card strette
 const CAT_SHORT = { COMBATTIMENTO: "ATTACCO", DIFESA: "DIFESA", DENARO: "DENARO" };
 
-// ─── DEBUG FLAGS — importati da debug.js (URL params) ────────────────────────
-export { DEBUG_MODE, DEBUG_COMBAT, DEBUG_BIOME, DEBUG_ROW } from "../debug.js";
 
 // ─── COMBAT CARD SCRATCH ─────────────────────────────────────
 export function CombatCardScratch({ cell, onRevealed, catColors, disabled, nailState = "sana" }) {

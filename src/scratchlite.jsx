@@ -40,7 +40,6 @@ import { LogPanel, LogSidebar } from "./components/LogPanel.jsx";
 import { NailSidebar } from "./components/NailSidebar.jsx";
 import { InventorySidebar } from "./components/InventorySidebar.jsx";
 // ScratchCell usato solo dentro ScratchCardView — non serve importarlo qui
-import { DEBUG_MODE, DEBUG_COMBAT, DEBUG_BIOME, DEBUG_ROW } from "./debug.js";
 import { CARD_VARIANTS } from "./utils/combat.js";
 import { STORAGE_KEYS, getStored, setStored, removeStored } from "./utils/storage.js";
 
@@ -156,35 +155,21 @@ export default function Grattini() {
     });
   }, []);
 
-  // ─── DEBUG MODE — flags definiti a livello modulo sopra CombatView ────────
-
   // ─── GAME INITIALIZATION ───────────────────────────────────
   const startGame = () => {
     AudioEngine.init(); // sblocca AudioContext durante gesto utente
     const newPlayer = {
-      money: (DEBUG_COMBAT || DEBUG_BIOME != null) ? 100 : 0,
-      nails: DEBUG_COMBAT || DEBUG_MODE
-        ? [
-          { state:"sana",        scratchCount:0, implant:null, implantUses:0, stats:{fortuna:0, potenza:0, resilienza:0}, heldItem:null, cremaHP:0 },
-          { state:"graffiata",   scratchCount:1, implant:null, implantUses:0, stats:{fortuna:0, potenza:0, resilienza:0}, heldItem:null, cremaHP:0 },
-          { state:"sanguinante", scratchCount:0, implant:null, implantUses:0, stats:{fortuna:0, potenza:0, resilienza:0}, heldItem:null, cremaHP:0 },
-          { state:"sana",        scratchCount:0, implant:null, implantUses:0, stats:{fortuna:0, potenza:0, resilienza:0}, heldItem:null, cremaHP:1 },
-          { state:"sana",        scratchCount:0, implant:null, implantUses:0, stats:{fortuna:0, potenza:0, resilienza:0}, heldItem:null, cremaHP:0 },
-        ]
-        : Array(5).fill(null).map(() => ({ state: "sana", scratchCount: 0, implant: null, implantUses: 0, stats: { fortuna: 0, potenza: 0, resilienza: 0 }, heldItem: null, cremaHP: 0 })),
+      money: 0,
+      nails: Array(5).fill(null).map(() => ({ state: "sana", scratchCount: 0, implant: null, implantUses: 0, stats: { fortuna: 0, potenza: 0, resilienza: 0 }, heldItem: null, cremaHP: 0 })),
       activeNail: 0,
-      items: (DEBUG_MODE || DEBUG_COMBAT) ? Object.keys(ITEM_DEFS) : [],
-      grattatori: (DEBUG_MODE || DEBUG_COMBAT)
-        ? Object.entries(GRATTATORE_DEFS).map(([id, g]) => ({ id, ...g, usesLeft: g.maxUses||1 }))
-        : [], // { id, name, emoji, effect, usesLeft }
-      equippedGrattatore: null, // currently equipped grattatore object or null
-      scratchCards: (DEBUG_MODE || DEBUG_COMBAT)
-        ? CARD_TYPES.map(ct => ({...generateCard(ct.id), owned: true}))
-        : [
-          {...generateCard("fortunaFlash"), owned: false},
-          {...generateCard("setteEMezzo"), owned: false},
-          {...generateCard("portaFortuna"), owned: false},
-        ],
+      items: [],
+      grattatori: [], // { id, name, emoji, effect, usesLeft }
+      equippedGrattatore: null,
+      scratchCards: [
+        {...generateCard("fortunaFlash"), owned: false},
+        {...generateCard("setteEMezzo"), owned: false},
+        {...generateCard("portaFortuna"), owned: false},
+      ],
       fortune: 0,
       fortuneTurns: 0,
       smokesTotal: 0,
@@ -231,9 +216,8 @@ export default function Grattini() {
       }
     }
     setPlayer(finalPlayer);
-    const startBiome = (DEBUG_BIOME != null) ? DEBUG_BIOME : 0;
-    setCurrentBiome(startBiome);
-    setMap(generateMap(startBiome));
+    setCurrentBiome(0);
+    setMap(generateMap(0));
     setCurrentRow(0);
     setVisitedNodes([]);
     setLog([]);
@@ -244,28 +228,9 @@ export default function Grattini() {
     setGameStats({ nodesVisited:0, moneyEarned:0, cardsScratched:0, scratchWins:0, scratchLosses:0, moneySpent:0, combatsWon:0, combatsLost:0, nailsLost:0, dreamsHad:0, slotPlays:0, bestPrize:0, combosFired:0, _chirurgoUses:0, _broke:false });
     setFirstScratchShown(false);
     setVictoryRevealed(false);
-    if (DEBUG_COMBAT) {
-      setIntroCardsLeft(0);
-      if (DEBUG_COMBAT === "boss") {
-        const bossName = BIOMES[startBiome]?.boss || "Il Drago d'Oro";
-        setCombatEnemy({ name: bossName, isBoss: true, isMiniboss: false, isElite: false });
-        setCurrentNode({ type: "boss", id: "boss", bossName, row: 10 }); // debug: currentNode boss
-      } else {
-        setCombatEnemy({ name: "Ladro di Strada", isBoss: false, isMiniboss: false, isElite: false });
-      }
-      setScreen("combat");
-    } else if (DEBUG_BIOME != null) {
-      setIntroCardsLeft(0); // salta Nonno Carmelo — debug bioma
-      if (typeof DEBUG_ROW === "number") setCurrentRow(DEBUG_ROW);
-      setScreen("map");
-    } else if (DEBUG_MODE) {
-      setIntroCardsLeft(0); // salta Nonno Carmelo
-      setCurrentNode({ type:"tabaccaio" });
-      setScreen("shop");
-    } else {
-      setTutorialPage(0); setScreen("tutorialNails");
-    }
-    addLog(`Benvenuto a ${BIOMES[startBiome].name}!`, C.cyan);
+    setTutorialPage(0);
+    setScreen("tutorialNails");
+    addLog(`Benvenuto a ${BIOMES[0].name}!`, C.cyan);
     addLog("Nonno Carmelo ti ferma al bancone. Ha tre biglietti e mani che tremano. Gratti tu, scegli tu.", C.gold);
   };
 
