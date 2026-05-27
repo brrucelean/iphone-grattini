@@ -140,7 +140,6 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
   useEffect(() => {
     if (!latest) return;
     setTypedText(""); setTypingDone(false);
-    // Nuovo messaggio → scolla in testa così si legge dall'inizio
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     let i = 0;
     const iv = setInterval(() => {
@@ -151,6 +150,13 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
     }, 28);
     return () => clearInterval(iv);
   }, [latestPlain]);
+
+  // Segui il cursore: ogni volta che il testo cresce scrolla in fondo
+  useEffect(() => {
+    if (scrollRef.current && !typingDone) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [typedText, typingDone]);
 
   const skip = () => { setTypedText(latestPlain); setTypingDone(true); };
 
