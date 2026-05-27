@@ -710,7 +710,7 @@ export default function Grattini() {
             </div>
           </div>
 
-          {/* ── CARMELO STRIP — striscia 44px con typewriter, visibile durante introScratch ── */}
+          {/* ── CARMELO STRIP — striscia 96px multi-riga con typewriter, visibile durante introScratch ── */}
           {returnScreen === "introScratch" && carmeloLog.length > 0 && (
             <CarmeloScratchStrip messages={carmeloLog} color={C.gold} />
           )}

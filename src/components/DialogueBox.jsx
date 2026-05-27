@@ -256,19 +256,14 @@ export function CarmeloScratchStrip({ messages, color }) {
   const latestPlain = msgPlainText(latest);
   const [typedText, setTypedText] = useState("");
   const [done, setDone] = useState(true);
-  const textRef  = useRef(null);
-  const wrapRef  = useRef(null);
+  const scrollRef = useRef(null);
 
-  // Ogni volta che arriva un nuovo messaggio: reset e riparti
+  // Nuovo messaggio: reset e riparti
   useEffect(() => {
     if (!latestPlain) return;
     setTypedText("");
     setDone(false);
-    // Resetta posizione E transition del testo (altrimenti scroll-back animato del msg precedente continua)
-    if (textRef.current) {
-      textRef.current.style.transition = "none";
-      textRef.current.style.transform = "translateX(0)";
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
     let i = 0;
     const iv = setInterval(() => {
       if (i >= latestPlain.length) { clearInterval(iv); setDone(true); return; }
@@ -279,69 +274,63 @@ export function CarmeloScratchStrip({ messages, color }) {
     return () => clearInterval(iv);
   }, [latestPlain]);
 
-  // Dopo ogni carattere: sposta il testo a sinistra per tenere il cursore visibile
+  // Segui il cursore: scrolla in basso durante il typing
   useEffect(() => {
-    if (!textRef.current || !wrapRef.current) return;
-    const overflow = textRef.current.scrollWidth - wrapRef.current.clientWidth;
-    if (overflow > 0) {
-      textRef.current.style.transform = `translateX(-${overflow}px)`;
+    if (scrollRef.current && !done) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [typedText]);
+  }, [typedText, done]);
 
-  // Dopo la fine: torna lentamente all'inizio per rileggere il testo
+  // Dopo la fine: torna in cima lentamente per rileggere
   useEffect(() => {
-    if (!done || !textRef.current || !wrapRef.current) return;
-    const overflow = textRef.current.scrollWidth - wrapRef.current.clientWidth;
-    if (overflow > 2) {
-      // Pausa 0.8s poi scorre indietro in 1.5s
-      const t = setTimeout(() => {
-        if (textRef.current) {
-          textRef.current.style.transition = `transform 1.5s ease-in-out`;
-          textRef.current.style.transform = "translateX(0)";
-        }
-      }, 800);
-      return () => clearTimeout(t);
-    }
+    if (!done || !scrollRef.current) return;
+    const el = scrollRef.current;
+    if (el.scrollTop < 4) return;
+    const t = setTimeout(() => {
+      el.style.scrollBehavior = "smooth";
+      el.scrollTop = 0;
+      setTimeout(() => { if (el) el.style.scrollBehavior = ""; }, 1600);
+    }, 900);
+    return () => clearTimeout(t);
   }, [done]);
 
-  const skip = () => {
-    setTypedText(latestPlain);
-    setDone(true);
-  };
+  const skip = () => { setTypedText(latestPlain); setDone(true); };
 
   if (!latest) return null;
   return (
     <div onClick={skip} style={{
-      flexShrink:0, height:"44px",
+      flexShrink:0, height:"96px",
       display:"flex", alignItems:"stretch",
       background:"#030308",
       borderTop:`1px solid ${color}44`,
       overflow:"hidden",
-      boxShadow:`0 -4px 16px #00000066`,
+      boxShadow:`0 -4px 20px #00000088`,
       cursor:"pointer",
     }}>
-      {/* Badge NPC fisso */}
+      {/* Badge NPC fisso — allineato in alto */}
       <div style={{
-        flexShrink:0, width:"42px",
-        display:"flex", alignItems:"center", justifyContent:"center",
+        flexShrink:0, width:"46px",
+        display:"flex", alignItems:"flex-start", justifyContent:"center",
+        paddingTop:"12px",
         borderRight:`1px solid ${color}22`,
         background:`${color}08`,
-        fontSize:"18px", lineHeight:1,
+        fontSize:"22px", lineHeight:1,
       }}>🧓</div>
-      {/* Area testo — overflow hidden, il testo si sposta via transform */}
-      <div ref={wrapRef} style={{
-        flex:1, overflow:"hidden", position:"relative", display:"flex", alignItems:"center",
-        maskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
-        WebkitMaskImage:"linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)",
+      {/* Area testo — multi-riga, scroll verticale, fade in basso */}
+      <div ref={scrollRef} style={{
+        flex:1, overflowY:"auto", overflowX:"hidden",
+        padding:"10px 12px 10px 10px",
+        scrollbarWidth:"none",
+        maskImage:"linear-gradient(to bottom, black 75%, transparent 100%)",
+        WebkitMaskImage:"linear-gradient(to bottom, black 75%, transparent 100%)",
       }}>
-        <div ref={textRef} style={{
-          whiteSpace:"nowrap",
+        <div style={{
           color: color+"cc", fontSize:"12px", fontStyle:"italic",
           textShadow:`0 0 8px ${color}33`,
           letterSpacing:"0.3px",
-          willChange:"transform",
-          // transition viene impostata solo dopo la fine (vedi useEffect[done])
-          transition:"none",
+          lineHeight:"1.6",
+          whiteSpace:"pre-wrap",
+          wordBreak:"break-word",
         }}>
           {typedText}
           {!done && (
