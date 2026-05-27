@@ -87,7 +87,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
   // Nodi: dimensioni ottimizzate per iPhone 16 Pro touch target
   const maxNodesPerRow = map.rows.reduce((acc, r) => Math.max(acc, r.length), 1);
   const NW = Math.min(92, Math.max(64, Math.floor(W / Math.max(1, maxNodesPerRow)) - 10));
-  const NH = Math.round(NW * 0.62);
+  const NH = Math.round(NW * 0.72);
 
   const nodePos = useMemo(() => {
     const pos = {};
@@ -553,7 +553,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
                     width: NW, height: NH,
                     display:"flex", flexDirection:"column",
                     alignItems:"center", justifyContent:"center",
-                    gap:"2px",
+                    gap:"3px",
                     border: `${borderWidth}px solid ${borderCol}`,
                     background: bgCol,
                     overflow:"hidden",
@@ -603,7 +603,7 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
 
                   {/* Emoji icona */}
                   <span style={{
-                    fontSize: isBoss ? "25px" : "20px",
+                    fontSize: isBoss ? "28px" : "22px",
                     lineHeight:1,
                     filter: visited
                       ? "grayscale(0.9) brightness(0.45)"
@@ -666,6 +666,41 @@ export function MapView({ map, currentRow, visitedNodes, onSelectNode, reachable
         </div>
       </div>
 
+      {/* ══ FOOTER FISSO — Legenda + hint scroll ══════════════════ */}
+      <div style={{
+        flexShrink:0,
+        borderTop:`1px solid ${biomeColor}33`,
+        background:`linear-gradient(0deg,#060610 0%,#080814 100%)`,
+        padding:"5px 10px",
+        display:"flex", alignItems:"center", gap:"0",
+        justifyContent:"space-between",
+      }}>
+        {/* Legenda tipo nodi */}
+        <div style={{display:"flex", alignItems:"center", gap:"8px", flexWrap:"nowrap", overflow:"hidden"}}>
+          {LEGEND.map(({ col, label }) => (
+            <span key={label} style={{
+              display:"flex", alignItems:"center", gap:"3px",
+              color: col, fontSize:"8px", fontFamily:FONT, letterSpacing:"1px",
+              flexShrink:0,
+            }}>
+              <span style={{
+                display:"inline-block", width:"8px", height:"8px",
+                background: col,
+                boxShadow:`0 0 5px ${col}`,
+              }}/>
+              {label}
+            </span>
+          ))}
+        </div>
+
+        {/* Hint scroll */}
+        <span style={{
+          flexShrink:0,
+          color:`${biomeColor}55`, fontSize:"9px",
+          fontFamily:FONT, letterSpacing:"1px",
+          marginLeft:"8px",
+        }}>↕ SCORRI</span>
+      </div>
     </div>
   );
 }
