@@ -774,8 +774,9 @@ export default function Grattini() {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
         /* Scanlines CRT + ambient glow del bioma corrente */
         backgroundImage: [
-          "repeating-linear-gradient(180deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.26) 2px, rgba(0,0,0,0.26) 4px)",
-          `radial-gradient(ellipse 80% 42% at 50% 0%, ${bioPal.border}12 0%, transparent 100%)`,
+          /* linee bright ogni 4px — visibili anche su sfondo nero */
+          "repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 4px)",
+          `radial-gradient(ellipse 90% 55% at 50% 0%, ${bioPal.border}22 0%, transparent 100%)`,
         ].join(","),
         backgroundAttachment: "local",
         position: "relative",
