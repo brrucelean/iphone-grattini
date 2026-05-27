@@ -1018,8 +1018,8 @@ export default function Grattini() {
       {/* ═══ TUTORIAL UNGHIE — paginated, no scroll ═══ */}
       {screen === "tutorialNails" && (
         <div style={{
-          width:"100%", height:"100%", maxWidth:"520px",
-          display:"flex", flexDirection:"column",
+          width:"100%", flex:1, minHeight:0, maxWidth:"520px", margin:"0 auto",
+          display:"flex", flexDirection:"column", justifyContent:"center",
           padding:"10px 14px 14px", boxSizing:"border-box",
           overflowY:"auto", WebkitOverflowScrolling:"touch",
         }}>
