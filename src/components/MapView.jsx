@@ -7,7 +7,7 @@ import { AudioEngine } from "../audio.js";
 import { Haptics } from "../utils/haptics.js";
 
 // ─── COSTANTI LAYOUT ─────────────────────────────────────────────
-const ROW_H = 110;   // altezza per riga — ottimizzata iPhone 16 Pro (touch target ≥44pt)
+const ROW_H = 88;    // altezza per riga — ottimizzata iPhone 16 Pro (touch target ≥44pt)
 const DANGER_TYPES = new Set(["ladro","spacciatore","miniboss","poliziotto"]);
 const SAFE_TYPES   = new Set(["locanda","tabaccaio","mendicante","sacerdote","chirurgo","maestroTe"]);
 
