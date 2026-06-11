@@ -145,7 +145,7 @@ export function useNailHandlers({ player, updatePlayer, triggerNpcComment, scrat
         const next = nails.findIndex((n, i) => i !== active && n.state !== "morta");
         if (next >= 0) newActive = next;
       }
-      // GAME OVER immediato se tutte le unghie finiscono durante il combattimento
+      // GAY OVER immediato se tutte le unghie finiscono durante il combattimento
       if (!nails.some(n => n.state !== "morta")) {
         setTimeout(() => setScreen("gameOver"), 600);
       }

@@ -2187,7 +2187,7 @@ export default function Grattini() {
                     }
                   }
                 }
-                // GAME OVER immediato se tutte le unghie sono morte durante il combattimento
+                // GAY OVER immediato se tutte le unghie sono morte durante il combattimento
                 if (!isAlive(nails)) {
                   setTimeout(() => setScreen("gameOver"), 800);
                 }
@@ -2252,7 +2252,7 @@ export default function Grattini() {
                 const next = nails.findIndex((n,i) => i !== active && n.state !== "morta");
                 newActive = next >= 0 ? next : active;
               }
-              // GAME OVER se tutte le unghie morte
+              // GAY OVER se tutte le unghie morte
               if (!nails.some(n => n.state !== "morta")) {
                 setTimeout(() => setScreen("gameOver"), 800);
               }
