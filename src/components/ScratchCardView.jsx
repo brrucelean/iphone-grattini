@@ -590,7 +590,7 @@ export function ScratchCardView({ card, onDone, nailState, nailImplant=null, for
   const panelBorder = winFound ? C.green : accent;
 
   return (
-    <div style={{
+    <div className={tier >= 3 ? "holo" : undefined} style={{
       ...S.panel, textAlign:"center",
       maxWidth:"440px", margin:"8px auto",
       position: "relative",

@@ -61,6 +61,7 @@ function ProductTile({ emoji, name, subtitle, cost, maxPrize, accent, canAfford,
     <Tooltip text={tooltip}>
       <div
         onClick={cantPay ? undefined : onClick}
+        className={shimmer && !cantPay ? "holo holo-strong" : undefined}
         style={{
           flexShrink: 0,          // non si schiaccia nel row orizzontale
           width: "130px",

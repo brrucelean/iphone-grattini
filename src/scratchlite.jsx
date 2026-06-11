@@ -504,6 +504,56 @@ export default function Grattini() {
         @keyframes statTileIn { 0% { transform:scale(0.7) translateY(10px); opacity:0; } 100% { transform:scale(1) translateY(0); opacity:1; } }
         @keyframes scratchCardSlideIn { 0% { opacity:0; transform:translateY(18px) scale(0.97); } 100% { opacity:1; transform:translateY(0) scale(1); } }
         @keyframes scratchTopBarIn { 0% { opacity:0; transform:translateY(-10px); } 100% { opacity:1; transform:translateY(0); } }
+
+        /* ══ V2 HOLO LAYER — foil olografico, glassmorphism, tilt 3D ══════════
+           .holo        → overlay arcobaleno iridescente + sweep di luce diagonale
+           .holo-strong → variante più intensa (title screen, card leggendarie)
+           .glass       → pannello traslucido con blur (vince sugli inline style)
+           .card3d      → respiro prospettico 3D continuo, delay sfalsati        */
+        @keyframes holoSweep { 0% { background-position: 0% 0%; } 100% { background-position: 300% 300%; } }
+        @keyframes holoGlide { 0% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
+        @keyframes holoBreath {
+          0%,100% { transform: perspective(700px) rotateX(1.4deg) rotateY(-2.2deg) translateY(0); }
+          50%      { transform: perspective(700px) rotateX(-1.4deg) rotateY(2.2deg) translateY(-3px); }
+        }
+        @keyframes holoTitleHue {
+          0%,100% { filter: hue-rotate(-12deg) saturate(1.1); }
+          50%      { filter: hue-rotate(28deg) saturate(1.5) brightness(1.1); }
+        }
+        .holo { position: relative; isolation: isolate; }
+        .holo::before {
+          content:""; position:absolute; inset:0; z-index:4; pointer-events:none;
+          background: linear-gradient(115deg,
+            rgba(255,0,80,0.30) 0%, rgba(255,160,0,0.24) 14%, rgba(255,240,0,0.20) 28%,
+            rgba(0,255,140,0.20) 42%, rgba(0,220,255,0.28) 56%, rgba(80,80,255,0.26) 70%,
+            rgba(220,0,255,0.28) 84%, rgba(255,0,80,0.30) 100%);
+          background-size: 320% 320%;
+          mix-blend-mode: screen;
+          opacity: 0.26;
+          animation: holoSweep 6s linear infinite;
+        }
+        .holo::after {
+          content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
+          background: linear-gradient(100deg, transparent 36%, rgba(255,255,255,0.30) 47%, rgba(255,255,255,0.06) 53%, transparent 64%);
+          background-size: 260% 100%;
+          mix-blend-mode: screen;
+          animation: holoGlide 3.4s linear infinite;
+        }
+        .holo-strong::before { opacity: 0.45; }
+        .holo-strong::after  { animation-duration: 2.6s; }
+        .glass {
+          background: rgba(8,10,24,0.55) !important;
+          backdrop-filter: blur(16px) saturate(1.6);
+          -webkit-backdrop-filter: blur(16px) saturate(1.6);
+        }
+        .card3d { transform-style: preserve-3d; animation: holoBreath 7s ease-in-out infinite; will-change: transform; }
+        .card3d:nth-child(2) { animation-delay: -1.8s; }
+        .card3d:nth-child(3) { animation-delay: -3.5s; }
+        .card3d:nth-child(4) { animation-delay: -5.2s; }
+        .holo-title { animation: holoTitleHue 9s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .holo::before, .holo::after, .card3d, .holo-title { animation: none !important; }
+        }
       `}</style>
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
@@ -821,7 +871,7 @@ export default function Grattini() {
             <div style={{color:C.dim, fontSize:"clamp(9px, 1.2vw, 12px)", letterSpacing:"4px",
               textShadow:`0 0 8px ${C.gold}44`,
             }}>
-              ░ BETA 5 ░
+              ░ V2 · HOLO EDITION ░
             </div>
             <div style={{color:C.text+"aa", marginBottom:"28px", marginTop:"14px", fontSize:"clamp(11px, 1.1vw, 14px)", letterSpacing:"0.5px", textAlign:"center", lineHeight:"1.6"}}>
               Un roguelike di grattate, unghie e fortuna.
@@ -883,14 +933,16 @@ export default function Grattini() {
               return cards.map((c, ci) => {
                 const pct = c.max ? (c.count / c.max) : 1;
                 return (
-                  <div key={ci} onClick={c.onClick} style={{
+                  <div key={ci} onClick={c.onClick} className="holo holo-strong card3d" style={{
                     cursor:"pointer", userSelect:"none",
-                    background:"#0a0a14",
+                    background:"rgba(10,10,24,0.55)",
+                    backdropFilter:"blur(10px) saturate(1.5)",
+                    WebkitBackdropFilter:"blur(10px) saturate(1.5)",
                     border:`2px solid ${c.accent}`,
                     boxShadow:`0 0 18px ${c.accent}44, inset 0 0 22px ${c.accent}14`,
                     display:"flex", flexDirection:"column",
                     position:"relative", overflow:"hidden",
-                    transition:"transform 0.15s, box-shadow 0.15s",
+                    transition:"box-shadow 0.15s",
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.transform = "translateY(-3px)";

@@ -11,9 +11,11 @@ export const S = {
     overflowX: "hidden",
     background: C.bg,
   },
-  // Pannello standard — bordo 2px pieno + pixel-drop-shadow + gradient top
+  // Pannello standard — V2 HOLO: vetro traslucido con blur + bordo 2px + pixel shadow
   panel: {
-    background: `linear-gradient(180deg, ${C.card} 0%, #030308 100%)`,
+    background: `linear-gradient(180deg, rgba(10,12,26,0.62) 0%, rgba(3,3,8,0.78) 100%)`,
+    backdropFilter: "blur(12px) saturate(1.5)",
+    WebkitBackdropFilter: "blur(12px) saturate(1.5)",
     border: `2px solid ${C.dim}`,
     borderRadius: "0",
     padding: "clamp(10px, 1.5vh, 18px) clamp(12px, 2vw, 28px)",
