@@ -1,110 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { C, FONT } from "../data/theme.js";
-import { NPC_ART, SPR_BIG, SPR_COLOR } from "../data/art.js";
+import { SPR_BIG } from "../data/art.js";
 import { AudioEngine } from "../audio.js";
 import { CornerBrackets } from "./Vintage.jsx";
 import { normalizePortrait } from "../utils/nail.js";
-
-export function DialogueBox({ npc, name, color, text, footer }) {
-  const [displayed, setDisplayed] = useState("");
-  const [done, setDone] = useState(false);
-  const portrait = SPR_BIG[npc];
-
-  useEffect(() => {
-    setDisplayed("");
-    setDone(false);
-    let i = 0;
-    const iv = setInterval(() => {
-      if (i >= text.length) { clearInterval(iv); setDone(true); return; }
-      setDisplayed(text.slice(0, i + 1));
-      if (i % 3 === 0 && text[i] !== ' ' && text[i] !== '"') AudioEngine.dialogueTick();
-      i++;
-    }, 28);
-    return () => clearInterval(iv);
-  }, [text, npc]);
-
-  const skip = () => { setDisplayed(text); setDone(true); };
-
-  return (
-    <div onClick={skip} style={{
-      display:"flex", gap:"0", cursor:"pointer",
-      border:`2px solid ${color}66`,
-      boxShadow:`0 0 30px ${color}22, inset 0 0 60px ${color}08`,
-      background:"#04040e",
-      animation:"dialogueIn 0.3s ease-out",
-      minHeight:"200px",
-      position:"relative",
-    }}>
-      <CornerBrackets color={color} size={13} inset={-3} thickness={2} glow />
-      {/* Ritratto ASCII sinistro */}
-      <div style={{
-        flexShrink:0, width:"160px",
-        borderRight:`1px solid ${color}44`,
-        background:`linear-gradient(180deg, ${color}08 0%, transparent 100%)`,
-        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-        padding:"12px 8px",
-      }}>
-        {/* Nameplate solid sopra il portrait */}
-        <div style={{
-          display:"inline-block", background: color, color:"#000",
-          fontSize:"8px", fontWeight:"bold", letterSpacing:"2.5px",
-          padding:"2px 7px", marginBottom:"10px",
-          boxShadow:`0 0 8px ${color}aa`,
-        }}>★ {name.toUpperCase()} ★</div>
-        {portrait && (
-          <pre style={{
-            color: color+"cc", fontSize:"9.5px", lineHeight:"1.35", margin:0,
-            fontFamily: FONT,
-            textShadow:`0 0 6px ${color}55`,
-          }}>{normalizePortrait(portrait).join("\n")}</pre>
-        )}
-        <div style={{
-          marginTop:"6px", fontSize:"8px", color: color+"99",
-          letterSpacing:"2px",
-        }}>─ RITRATTO ─</div>
-      </div>
-      {/* Testo dialogo destro */}
-      <div style={{
-        flex:1, padding:"20px 24px",
-        display:"flex", flexDirection:"column", justifyContent:"flex-start",
-      }}>
-        <div style={{
-          color: color, fontSize:"13px", fontWeight:"bold", letterSpacing:"3px",
-          marginBottom:"14px",
-          textShadow:`0 0 10px ${color}, 0 0 18px ${color}55`,
-          borderBottom:`1px solid ${color}33`, paddingBottom:"8px",
-          flexShrink:0, fontFamily:FONT,
-        }}>⬡ {name} ⬡</div>
-        {/* Ghost testo pieno — riserva spazio, evita reflow durante typewriter */}
-        <div style={{position:"relative", flex:1}}>
-          <div style={{
-            visibility:"hidden",
-            fontSize:"13px", lineHeight:"1.9", fontStyle:"italic", whiteSpace:"pre-wrap",
-          }}>❝{text}❞</div>
-          <div style={{
-            position:"absolute", top:0, left:0, right:0,
-            color:"#e0e0e0", fontSize:"13px", lineHeight:"1.9",
-            fontStyle:"italic", whiteSpace:"pre-wrap",
-            textShadow:`0 0 3px ${color}22`,
-          }}>
-            <span style={{color, opacity:0.75, marginRight:"2px"}}>❝</span>
-            {displayed}
-            {!done && <span style={{
-              color: color,
-              animation:"dialogueCursor 0.5s step-start infinite",
-            }}>▌</span>}
-            {done && <span style={{color, opacity:0.75, marginLeft:"2px"}}>❞</span>}
-          </div>
-        </div>
-        {done && footer && (
-          <div style={{marginTop:"12px", flexShrink:0}}>
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── CARMELO LOG BOX ─────────────────────────────────────────
 // Extracts plain text from a message (string or array of segments)
@@ -213,35 +112,6 @@ export function CarmeloLogBox({ npc, name, color, messages, footer, height="170p
           )}
         </div>
         {footer && <div style={{marginTop:"12px", flexShrink:0}}>{footer}</div>}
-      </div>
-    </div>
-  );
-}
-
-export function CarmeloLogMini({ messages, color }) {
-  const scrollRef = useRef(null);
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
-  if (!messages || messages.length === 0) return null;
-  return (
-    <div style={{borderTop:`1px solid ${color}22`, padding:"8px 6px", display:"flex", flexDirection:"column"}}>
-      <div style={{color, fontSize:"9px", letterSpacing:"2px", marginBottom:"5px", opacity:0.7}}>
-        🧓 carmelo
-      </div>
-      <div ref={scrollRef} style={{maxHeight:"110px", overflowY:"auto", scrollbarWidth:"none",
-        display:"flex", flexDirection:"column", gap:"6px",
-      }}>
-        {messages.slice(-6).map((msg, i, arr) => (
-          <div key={i} style={{
-            fontSize:"10px", fontStyle:"italic", lineHeight:"1.4",
-          }}>
-            "
-            <MsgRender msg={msg} color={i === arr.length-1 ? color+"dd" : "#444"}
-              style={{color: i === arr.length-1 ? color+"dd" : "#444"}} />
-            "
-          </div>
-        ))}
       </div>
     </div>
   );

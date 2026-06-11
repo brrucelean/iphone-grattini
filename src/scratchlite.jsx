@@ -29,11 +29,9 @@ import { generateMap } from "./utils/map.js";
 
 import { S } from "./utils/styles.js";
 // uiZoom reserved for future use
-import { SkeletonFinger } from "./components/SkeletonFinger.jsx";
 import { Tooltip } from "./components/Tooltip.jsx";
 import { Btn } from "./components/Btn.jsx";
-import { NailDisplay } from "./components/NailDisplay.jsx";
-import { DialogueBox, msgPlainText, MsgRender, CarmeloLogBox, CarmeloLogMini, CarmeloScratchStrip } from "./components/DialogueBox.jsx";
+import { CarmeloLogBox, CarmeloScratchStrip } from "./components/DialogueBox.jsx";
 import { NewsTicker, NpcCommentStrip } from "./components/NewsTicker.jsx";
 import { HUD } from "./components/HUD.jsx";
 import { LogPanel, LogSidebar } from "./components/LogPanel.jsx";
@@ -551,10 +549,36 @@ export default function Grattini() {
         .card3d:nth-child(3) { animation-delay: -3.5s; }
         .card3d:nth-child(4) { animation-delay: -5.2s; }
         .holo-title { animation: holoTitleHue 9s ease-in-out infinite; }
+        /* ── V2.1 TABACCHERIA NOTTURNA ── */
+        @keyframes neonFlickerT {
+          0%,100% { opacity:1; }
+          3%  { opacity:0.55; } 4%  { opacity:1; }
+          7%  { opacity:0.8; }  8%  { opacity:1; }
+          42% { opacity:1; }    43% { opacity:0.5; }
+          44% { opacity:1; }    71% { opacity:1; }
+          72% { opacity:0.75; } 73% { opacity:1; }
+        }
+        @keyframes smokeRise {
+          0%   { transform: translateY(0) translateX(0) scale(1); opacity:0; }
+          12%  { opacity:0.45; }
+          70%  { opacity:0.18; }
+          100% { transform: translateY(-78vh) translateX(36px) scale(2.1); opacity:0; }
+        }
         @media (prefers-reduced-motion: reduce) {
           .holo::before, .holo::after, .card3d, .holo-title { animation: none !important; }
         }
       `}</style>
+
+      {/* ── V2.1 GRANA PELLICOLA + VIGNETTATURA — unifica tutte le schermate ── */}
+      <div aria-hidden style={{
+        position:"fixed", inset:0, zIndex:90000, pointerEvents:"none",
+        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")`,
+        opacity:0.05, mixBlendMode:"overlay",
+      }}/>
+      <div aria-hidden style={{
+        position:"fixed", inset:0, zIndex:90001, pointerEvents:"none",
+        background:"radial-gradient(ellipse at 50% 42%, transparent 56%, rgba(0,0,0,0.40) 100%)",
+      }}/>
 
       {/* ═══ FLASH ROSSO — UNGHIA SANGUINANTE (estetico, sparisce da solo) ═══ */}
       {globalPainFlash > 0 && (
@@ -848,8 +872,44 @@ export default function Grattini() {
           position:"relative", padding:"24px 12px",
         }}>
 
+          {/* Fumo di tabaccheria — sale lento dietro al titolo */}
+          {[0, 1, 2].map(i => (
+            <div key={`smoke-${i}`} aria-hidden style={{
+              position:"absolute", bottom:"-50px", left:`${22 + i * 24}%`,
+              width:"110px", height:"110px", borderRadius:"50%",
+              background:"radial-gradient(circle, #8899aa2e 0%, transparent 70%)",
+              filter:"blur(16px)",
+              animation:`smokeRise ${15 + i * 6}s ${i * 4.5}s linear infinite`,
+              pointerEvents:"none", zIndex:0,
+            }}/>
+          ))}
+
           {/* Contenuto titolo */}
           <div style={{textAlign:"center", width:"min(95%, 440px)", position:"relative", zIndex:1}}>
+            {/* Insegna neon TABACCHI — la T blu, sempre accesa, mai del tutto */}
+            <div style={{
+              display:"flex", alignItems:"center", justifyContent:"center", gap:"12px",
+              marginBottom:"20px", animation:"neonFlickerT 5s step-end infinite",
+            }}>
+              <div style={{
+                width:"46px", height:"46px", flexShrink:0,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                border:"2px solid #2e7cff", background:"#020a1e",
+                boxShadow:"0 0 20px #2e7cff77, inset 0 0 14px #2e7cff33",
+                color:"#b8d4ff", fontSize:"32px", fontWeight:"bold", fontFamily:FONT,
+                textShadow:"0 0 14px #2e7cff",
+              }}>T</div>
+              <div style={{textAlign:"left"}}>
+                <div style={{
+                  color:"#b8d4ff", fontSize:"12px", letterSpacing:"7px",
+                  textShadow:"0 0 12px #2e7cffcc", fontFamily:FONT, fontWeight:"bold",
+                }}>TABACCHI</div>
+                <div style={{
+                  color:"#ff5577", fontSize:"8px", letterSpacing:"3px",
+                  textShadow:"0 0 8px #ff5577aa", marginTop:"4px", fontFamily:FONT,
+                }}>SALA GRATTINI · APERTO H24</div>
+              </div>
+            </div>
             {/* ASCII TITLE — foil iridescente animato sopra il gold */}
             <div className="foil-ascii" style={{display:"inline-block", margin:"0 auto", padding:"8px 0"}}>
               <pre style={{...S.pre, color:C.gold,
@@ -2127,7 +2187,7 @@ export default function Grattini() {
                     }
                   }
                 }
-                // GAY OVER immediato se tutte le unghie sono morte durante il combattimento
+                // GAME OVER immediato se tutte le unghie sono morte durante il combattimento
                 if (!isAlive(nails)) {
                   setTimeout(() => setScreen("gameOver"), 800);
                 }
@@ -2192,7 +2252,7 @@ export default function Grattini() {
                 const next = nails.findIndex((n,i) => i !== active && n.state !== "morta");
                 newActive = next >= 0 ? next : active;
               }
-              // GAY OVER se tutte le unghie morte
+              // GAME OVER se tutte le unghie morte
               if (!nails.some(n => n.state !== "morta")) {
                 setTimeout(() => setScreen("gameOver"), 800);
               }

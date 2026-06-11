@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, FONT } from "../data/theme.js";
-import { NPC_ART, SPR_BIG, SPR_COLOR, NPC_PALETTE, VECCHIO_DIALOGHI } from "../data/art.js";
+import { NPC_ART, SPR_BIG, NPC_PALETTE, VECCHIO_DIALOGHI } from "../data/art.js";
 import { MACELLAIO_IMPLANTS, GRATTATORE_DEFS } from "../data/items.js";
 import { S } from "../utils/styles.js";
 import { normalizePortrait } from "../utils/nail.js";
@@ -608,22 +608,10 @@ export function EventView({ node, player, onChoice }) {
                 overflow:"hidden",
                 maxHeight:"140px",
               }}>
-                {SPR_COLOR[node.type]
-                  ? SPR_COLOR[node.type].map((row, i) => (
-                      <span key={i}>
-                        {row.map((seg, j) => {
-                          const [text, color] = Array.isArray(seg) ? seg : [seg, accent];
-                          const t = blink && (i === 4 || i === 5) ? text.replace(/[•◕⊕∞☠><=;.◉]/g, "─") : text;
-                          return <span key={j} style={{color, textShadow:`0 0 4px ${color}44`}}>{t}</span>;
-                        })}
-                        {"\n"}
-                      </span>
-                    ))
-                  : normalizePortrait(bigArt).map((line, i) => {
-                      const t = blink && (i === 4 || i === 5) ? line.replace(/[•◕⊕∞☠><=;.]/g, "─") : line;
-                      return <span key={i} style={{color:accent, textShadow:`0 0 4px ${accent}44`}}>{t}{"\n"}</span>;
-                    })
-                }
+                {normalizePortrait(bigArt).map((line, i) => {
+                  const t = blink && (i === 4 || i === 5) ? line.replace(/[•◕⊕∞☠><=;.]/g, "─") : line;
+                  return <span key={i} style={{color:accent, textShadow:`0 0 4px ${accent}44`}}>{t}{"\n"}</span>;
+                })}
               </pre>
             </div>
             {/* NPC name plate */}
