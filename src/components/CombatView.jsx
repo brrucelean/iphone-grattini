@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, FONT } from "../data/theme.js";
-import { COMBAT_CARD_H, CAT_EMOJI_MAP, CAT_BG, PLAYER_COMBAT_CELLS, TAUNTS } from "../data/combat.js";
+import { COMBAT_CARD_H, CAT_EMOJI_MAP, CAT_BG, TAUNTS } from "../data/combat.js";
 import { CARD_TYPES, CARD_BALANCE } from "../data/cards.js";
 import { NAIL_INFO } from "../data/nails.js";
 import { rng, roll, pick } from "../utils/random.js";
@@ -254,16 +254,8 @@ export function CombatView({ enemy, player, onEnd, onNailDamage, onCellScratch, 
   // Draw cards at start of each round — generate 9 per la selezione scratch-5-scegli-3
   useEffect(() => {
     if (phase !== "draw") return;
-    // DEBUG: mano vincente + nemico disarmato
-    const debugWin = DEBUG_COMBAT === "boss";
-    const strappaCell = { ...PLAYER_COMBAT_CELLS.COMBATTIMENTO[0], category:"COMBATTIMENTO", scratched:false };
-    const hand = debugWin
-      ? Array.from({length:9}, () => ({...strappaCell}))
-      : generateCombatHand(9); // 9 carte — il giocatore ne gratta 5 poi ne sceglie 3
-    const scudoCell = { name:"Scudo!", desc:"Blocca il prossimo attacco", effect:"block", emoji:"🛡", category:"DIFESA", scratched:false };
-    const ec = debugWin
-      ? { category:"DIFESA", cells:[scudoCell, scudoCell, scudoCell], isSpecial:false }
-      : generateCombatCard(false, enemy.name); // carte nemico specifiche per tipo
+    const hand = generateCombatHand(9); // 9 carte — il giocatore ne gratta 5 poi ne sceglie 3
+    const ec = generateCombatCard(false, enemy.name); // carte nemico specifiche per tipo
     setPlayerHand(hand);
     setScratchedHandIdxs([]);
     setEnemyCard(ec);
